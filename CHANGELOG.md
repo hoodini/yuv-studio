@@ -2,13 +2,16 @@
 
 ## Unreleased
 
-**Smart tools** (a new **Smart** tab, and 7 new MCP tools: 58 in all)
+**Smart tools** (a new **Smart** tab, and 8 new MCP tools: 59 in all)
 
 - **Edit by text:** the transcript as words. Click a word to jump to it, select words and delete them, and they are cut from the video with the pause after them. Captions follow. MCP: `get_words`, `cut_words`.
 - **Remove filler words** in Hebrew and English: hesitations ("um", "uh", "אה", "אממ") and stutters ("I I", "אני אני"), never a deliberate "very very". Extended mode also takes soft fillers ("basically", "you know", "כאילו", "בעצם"). It uses a word-for-word transcription, since Whisper normally leaves fillers out. MCP: `remove_fillers`.
 - **Shorts from a long video:** the AI reads the transcript and picks the moments that stand alone, each with a title, its hook and why it works; one click makes a new vertical project from it. MCP: `find_shorts`, `make_short`.
 - **Vertical, following the face:** reframes to 9:16, 4:5 or 1:1 and adds keyframes that follow the speaker like a camera operator (OpenCV face detection, smoothed, with a dead zone so it does not jitter). MCP: `auto_reframe`.
 - **Clean voice:** noise and hum reduction, levelling and loudness in one step (ffmpeg); the cleaned copy replaces the original on the timeline and keeps its transcripts. MCP: `enhance_voice`.
+- **Remove background, no green screen:** Robust Video Matting on the GPU (ONNX Runtime) separates the people; the clip becomes a transparent video (VP9 WebM with alpha, sound kept). Behind it: the original blurred (portrait mode), the original with a big title between the layers (**text behind the person**), or transparent for any picture or video below. The model downloads once from its official release and is checked against its SHA-256. MCP: `remove_background` (59 tools).
+- **Text can sit under a video layer**, in the preview and in the export. Before, every title and caption was drawn above all video; now each group of text layers between two video layers is drawn at its place in the stack.
+- Transparent videos (VP8/VP9 WebM with alpha) keep their transparency on import, in the preview and in the export.
 - Cutting several ranges never leaves a sliver of a frame or two between them: cut edges snap to nearby clip edges and nearly-touching cuts join.
 
 **Open source**

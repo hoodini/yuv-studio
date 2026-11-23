@@ -264,11 +264,28 @@ export function itemsAt(p: Project, t: number): TextItem[] {
   return out;
 }
 
-/** Draw the whole text layer for time `t` onto a cleared canvas. Returns the box of each clip. */
-export function drawOverlay(ctx: Ctx, p: Project, t: number): Map<string, Box> {
+/**
+ * The text tracks grouped by where they sit among the video layers. `below` is the index of the video track the band
+ * goes under (-1: above every video layer, the usual case). A title placed under a video layer, such as text behind
+ * a person whose background was removed, makes its own band. The preview and the export both draw text this way.
+ */
+export function textBands(p: Project): { below: number; ids: Set<string> }[] {
+  const bands: { below: number; ids: Set<string> }[] = [];
+  let ids = new Set<string>();
+  for (let ti = p.tracks.length - 1; ti >= 0; ti--) {
+    const t = p.tracks[ti];
+    if ((t.kind === 'text' || t.kind === 'caption') && !t.hidden && t.clips.length) ids.add(t.id);
+    else if (t.kind === 'video' && !t.hidden && t.clips.length && ids.size) (bands.push({ below: ti, ids }), (ids = new Set()));
+  }
+  if (ids.size) bands.push({ below: -1, ids });
+  return bands;
+}
+
+/** Draw the text layer (or one band of it: `only` the given tracks) for time `t` onto a cleared canvas. Returns the box of each clip. */
+export function drawOverlay(ctx: Ctx, p: Project, t: number, only?: Set<string>): Map<string, Box> {
   const boxes = new Map<string, Box>();
   ctx.clearRect(0, 0, p.width, p.height);
-  for (const item of itemsAt(p, t)) boxes.set(item.clip.id, drawTextItem(ctx, item, p.width, p.height, t - item.clip.start));
+  for (const item of itemsAt(p, t)) if (!only || only.has(item.track.id)) boxes.set(item.clip.id, drawTextItem(ctx, item, p.width, p.height, t - item.clip.start));
   return boxes;
 }
 

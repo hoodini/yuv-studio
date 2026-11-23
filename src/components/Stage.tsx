@@ -3,7 +3,7 @@ import { actions } from '../actions';
 import { useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import { cssFilter, mediaRect, transformAt, transitionState, watermarkRect } from '../../shared/geometry';
 import { applyTransform, captionTransform } from '../../shared/ops';
-import { drawOverlay } from '../../shared/renderText';
+import { drawOverlay, textBands } from '../../shared/renderText';
 import type { Box } from '../../shared/renderText';
 import type { Clip, Project, Track, Transform } from '../../shared/types';
 import { audioFades, clamp, clipEnd, projectDuration } from '../../shared/types';
@@ -195,6 +195,8 @@ export function Stage() {
   const frameRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  /** Canvases for text that sits under a video layer (text behind a person), keyed by that layer's index. */
+  const bandCanvases = useRef(new Map<number, HTMLCanvasElement>());
   const els = useRef(new Map<string, El>());
   const textBoxes = useRef(new Map<string, Box>());
   const [fit, setFit] = useState(0.3);
@@ -223,7 +225,17 @@ export function Stage() {
       canvas.height = H;
     }
     const before = selection[0] ? JSON.stringify(textBoxes.current.get(selection[0])) : '';
-    textBoxes.current = drawOverlay(canvas.getContext('2d')!, project, t);
+    // Text above all video on the main canvas; each band under a video layer on its own canvas at that depth.
+    const bands = textBands(project);
+    const top = bands.find((b) => b.below < 0);
+    const boxes = drawOverlay(canvas.getContext('2d')!, project, t, top?.ids || new Set());
+    for (const b of bands) {
+      const c = b.below >= 0 ? bandCanvases.current.get(b.below) : undefined;
+      if (!c) continue;
+      if (c.width !== W || c.height !== H) (c.width = W), (c.height = H);
+      for (const [id, box] of drawOverlay(c.getContext('2d')!, project, t, b.ids)) boxes.set(id, box);
+    }
+    textBoxes.current = boxes;
     // The selection frame is drawn from these boxes; repaint once if the selected one moved.
     if (selection[0] && JSON.stringify(textBoxes.current.get(selection[0])) !== before) repaint();
   }, [project, t, playing, fonts, tick, selection, vol]);
@@ -316,7 +328,20 @@ export function Stage() {
       <div className="stage-area" ref={areaRef}>
         <div className="stage-frame-wrap" style={{ width: W * fit, height: H * fit }} onPointerDown={onDown}>
           <div className="stage-frame" ref={frameRef} style={{ width: W, height: H, transform: `scale(${fit})` }}>
-            <div ref={hostRef} className="stage-host" />
+            {/* Text under a video layer lives inside the media host (an isolated stacking context), so it can sit between the clips. */}
+            <div ref={hostRef} className="stage-host">
+              {textBands(project)
+                .filter((b) => b.below >= 0)
+                .map((b) => (
+                  <canvas
+                    key={b.below}
+                    ref={(el) => void (el ? bandCanvases.current.set(b.below, el) : bandCanvases.current.delete(b.below))}
+                    className="stage-canvas"
+                    // just under the clips of the video layer it sits below (see the media z-index in syncMedia)
+                    style={{ zIndex: (project.tracks.length - b.below) * 1000 - 1 }}
+                  />
+                ))}
+            </div>
             <canvas ref={canvasRef} className="stage-canvas" />
             {(() => {
               const wm = project.watermark;

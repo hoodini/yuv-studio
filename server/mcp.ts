@@ -241,6 +241,12 @@ export function createMcp(base: string, token = '', source: 'agent' | 'mcp' = 'm
     ({ projectId, assetId, ...rest }) => api('POST', `/api/projects/${projectId}/assets/${assetId}/enhance-voice`, rest).then((j) => waitJob(j.id)),
   );
   tool(
+    'remove_background',
+    'Remove the background from behind the people in a video clip (no green screen; Robust Video Matting, GPU when available). The clip is replaced by a transparent version. background: none (layers below show through), blur (the original blurred below: portrait mode), original (the original below, so text can go behind the person). With background original and text, a big title is put between the person and the background: text behind the person. quality: quality (default) or fast.',
+    { projectId: pid, clipId: z.string(), background: z.enum(['none', 'blur', 'original']).optional(), text: z.string().optional(), quality: z.enum(['quality', 'fast']).optional() },
+    ({ projectId, clipId, ...rest }) => api('POST', `/api/projects/${projectId}/clips/${clipId}/remove-background`, rest).then((j) => waitJob(j.id)),
+  );
+  tool(
     'auto_reframe',
     'Make the project vertical (default 1080x1920) or another narrower size, and keep the speaker in the frame: the main video clips get keyframes that follow the face like a camera operator. Clips that already have keyframes are left alone.',
     { projectId: pid, width: z.number().optional(), height: z.number().optional() },

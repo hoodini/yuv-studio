@@ -8,7 +8,7 @@ import path from 'node:path';
 import puppeteer from 'puppeteer-core';
 import { watermarkRect, BLUR_PX, SPIN_DEG, ZOOMING, mediaRect } from '../shared/geometry';
 import { EXPORT_PRESETS } from '../shared/presets';
-import { overlaySegments } from '../shared/renderText';
+import { overlaySegments, textBands } from '../shared/renderText';
 import type { Clip, Ease, Keyframe, Project, Transition } from '../shared/types';
 import { audioFades, clipEnd, projectDuration, uid } from '../shared/types';
 import { FFMPEG, hasNvenc, run } from './media';
@@ -116,8 +116,25 @@ export async function exportProject(src: Project, opts: ExportOpts, baseUrl: str
   const work = path.join(DIRS.tmp, uid('x_'));
   fs.mkdirSync(work, { recursive: true });
 
+  // Text layers are drawn by the browser, one picture stream per band: the text tracks that sit between the same two
+  // video layers. Usually all text is above all video (one band, laid over last); a title placed below a video
+  // layer, such as text behind a person whose background was removed, gets its own band under that layer.
+  const bands = textBands(p);
   update(0, 'Rendering text');
-  const textList = await renderTextLayer(p, work, baseUrl, totalFrames, (f) => update(f * 0.15, 'Rendering text'));
+  const bandLists = new Map<number, string>();
+  for (const [bi, band] of bands.entries()) {
+    const dir = path.join(work, `text${bi}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const only: Project = { ...p, tracks: p.tracks.filter((t) => (t.kind !== 'text' && t.kind !== 'caption') || band.ids.has(t.id)) };
+    const list = await renderTextLayer(only, dir, baseUrl, totalFrames, (f) => update(((bi + f) / bands.length) * 0.15, 'Rendering text'));
+    if (list) bandLists.set(band.below, list);
+  }
+  const textList = bandLists.get(-1) || null;
+  const overlayText = (list: string, tag: string) => {
+    const idx = addInput('-f', 'concat', '-safe', '0', '-i', list);
+    filters.push(`[${idx}:v]fps=${fps},format=rgba[txt${tag}]`, `${last}[txt${tag}]overlay=eof_action=pass:format=auto[otxt${tag}]`);
+    last = `[otxt${tag}]`;
+  };
 
   const inputs: string[] = [];
   const filters: string[] = [];
@@ -161,6 +178,8 @@ export async function exportProject(src: Project, opts: ExportOpts, baseUrl: str
       continue;
     }
     if (track.kind !== 'video') continue;
+    const band = bandLists.get(ti);
+    if (band) overlayText(band, `b${ti}`);
     for (const clip of track.clips) {
       const asset = p.assets.find((a) => a.id === clip.assetId);
       if (!asset) continue;
@@ -169,6 +188,9 @@ export async function exportProject(src: Project, opts: ExportOpts, baseUrl: str
       let idx: number;
       if (clip.type === 'image') {
         idx = /\.gif$/i.test(asset.path) ? addInput('-ignore_loop', '0', '-t', n(clip.duration), '-i', asset.path) : addInput('-loop', '1', '-framerate', String(fps), '-t', n(clip.duration), '-i', asset.path);
+      } else if (asset.alpha) {
+        // ffmpeg's built-in VP9 decoder drops the alpha channel; libvpx keeps it.
+        idx = addInput('-c:v', 'libvpx-vp9', '-ss', n(clip.in), '-t', n(clip.duration * clip.speed), '-i', asset.path);
       } else idx = addInput('-ss', n(clip.in), '-t', n(clip.duration * clip.speed), '-i', asset.path);
       if (audible) audioChain(idx, clip);
       if (track.hidden) continue;
@@ -224,7 +246,7 @@ export async function exportProject(src: Project, opts: ExportOpts, baseUrl: str
       const wipeOut = tOut.startsWith('wipe');
       const spin = tIn === 'spin' || tOut === 'spin';
       const rot = ((tf.rotation % 360) * Math.PI) / 180;
-      const alpha = clip.type === 'image' || tf.opacity < 1 || moveO || moveR || fadeIn || fadeOut || wipeIn || wipeOut || spin || rot !== 0;
+      const alpha = clip.type === 'image' || !!asset.alpha || tf.opacity < 1 || moveO || moveR || fadeIn || fadeOut || wipeIn || wipeOut || spin || rot !== 0;
       f.push(alpha ? 'format=rgba' : 'format=yuv420p');
       if (moveO) {
         // animated opacity: the alpha plane is multiplied by the keyframed value, frame by frame
@@ -315,11 +337,7 @@ export async function exportProject(src: Project, opts: ExportOpts, baseUrl: str
     }
   }
 
-  if (textList) {
-    const idx = addInput('-f', 'concat', '-safe', '0', '-i', textList);
-    filters.push(`[${idx}:v]fps=${fps},format=rgba[txt]`, `${last}[txt]overlay=eof_action=pass:format=auto[otxt]`);
-    last = '[otxt]';
-  }
+  if (textList) overlayText(textList, 'top');
   // Output size. Same shape as the project: a plain resize. Another shape (a preset, or width and height): reframe.
   let outW = 0;
   let outH = opts.height && opts.height !== H ? Math.round(opts.height / 2) * 2 : 0;

@@ -50,8 +50,9 @@ network: no firewall changes, no STUDIO_ALLOWED_HOSTS, no port forwarding.
 
 4. Captions on this computer (Whisper):
    - In the studio folder: python -m venv .venv, then with that environment's pip:
-     pip install --upgrade pip "faster-whisper>=1.1" opencv-python-headless
-     (OpenCV is for the Smart tab's vertical reframe that follows the face.)
+     pip install --upgrade pip "faster-whisper>=1.1" opencv-python-headless onnxruntime
+     (OpenCV is for the vertical reframe that follows the face, ONNX Runtime for background removal;
+     with an NVIDIA GPU install onnxruntime-gpu instead of onnxruntime.)
    - NVIDIA GPU on Windows or Linux: also pip install nvidia-cublas-cu12 "nvidia-cudnn-cu12==9.*"
      in the same environment (the studio finds them there, no system CUDA needed).
    - Create .env from .env.example if there is none, and set in it:

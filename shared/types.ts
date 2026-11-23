@@ -19,6 +19,8 @@ export interface Asset {
   /** Number of filmstrip thumbnails generated. */
   thumbs: number;
   size: number;
+  /** The video has an alpha channel (VP9 WebM with transparency, e.g. after background removal). */
+  alpha?: boolean;
   /** Stock media: where it came from, and the credit line its licence asks for (empty = none needed). */
   source?: { name: string; url: string; license: string; credit: string };
 }

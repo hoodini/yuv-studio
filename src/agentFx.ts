@@ -110,6 +110,7 @@ const T: Record<string, [Target, string, string]> = {
   cut_words: ['timeline', 'חותך מילים', 'Cutting words'],
   remove_fillers: ['timeline', 'מסיר מילות מילוי', 'Removing filler words'],
   enhance_voice: ['timeline', 'מנקה את הקול', 'Cleaning the voice'],
+  remove_background: ['stage', 'מסיר רקע', 'Removing the background'],
   auto_reframe: ['stage', 'ממסגר מחדש לפי הפנים', 'Reframing to follow the face'],
   find_shorts: ['timeline', 'מחפש קליפים קצרים', 'Finding short clips'],
   make_short: ['timeline', 'יוצר קליפ קצר', 'Making a short'],

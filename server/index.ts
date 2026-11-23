@@ -27,7 +27,7 @@ import { loadSettings, publicSettings, saveSettings } from './settings';
 import { checkPython, transcribe, transcriptionStatus } from './transcribe';
 import type { Lang } from './transcribe';
 import { cloneVoice, listVoices, speak, voicePreview } from './voice';
-import { autoReframe, enhanceVoice, findShorts, makeShort } from './smart';
+import { autoReframe, enhanceVoice, findShorts, makeShort, removeBackground } from './smart';
 import { cutRanges, findFillers, wordCutRanges } from '../shared/smart';
 
 const PORT = Number(process.env.PORT || 5177);
@@ -681,6 +681,15 @@ app.post(
     const a = asset(p, String(req.params.aid));
     const strength = req.body?.strength === 'strong' ? 'strong' : 'light';
     return startJob('smart', p.id, (update) => enhanceVoice(p.id, a, strength, update));
+  }),
+);
+app.post(
+  '/api/projects/:id/clips/:cid/remove-background',
+  wrap((req) => {
+    const p = loadProject(pid(req));
+    const b = req.body || {};
+    const background = b.background === 'blur' || b.background === 'original' ? b.background : 'none';
+    return startJob('smart', p.id, (update) => removeBackground(p.id, String(req.params.cid), { background, text: b.text ? String(b.text).slice(0, 120) : undefined, quality: b.quality === 'fast' ? 'fast' : 'quality' }, update));
   }),
 );
 app.post(

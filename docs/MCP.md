@@ -171,6 +171,7 @@ For a studio over the internet, set `STUDIO_URL` to the https address and `STUDI
 | `cut_words` | Edit by deleting text: cut words by their index from `get_words`, with the pause after each; captions follow |
 | `remove_fillers` | Cut "um", "uh", "אה", "אממ" and stutters; `aggressive` also takes "basically", "you know", "כאילו", "בעצם"; `dryRun` lists them |
 | `enhance_voice` | Clean a file's voice (noise, hum, level, loudness); a cleaned copy replaces it on the timeline |
+| `remove_background` | Take the background out from behind people in a clip, no green screen: transparent, blurred (portrait mode), or the original with a title between (text behind the person) |
 | `auto_reframe` | Make the project vertical (or 4:5, 1:1) with keyframes that follow the speaker's face |
 | `find_shorts` | Find the moments of a long video that work as Reels / TikTok / Shorts, each with a title, hook and reason |
 | `make_short` | A new vertical project from one moment (video, captions, titles, sounds), the speaker followed |
@@ -283,4 +284,4 @@ clip so it fades out over 2 seconds.
 curl -s -X POST http://127.0.0.1:5177/mcp -H "content-type: application/json" -H "accept: application/json, text/event-stream" -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-The answer lists the 58 tools.
+The answer lists the 59 tools.

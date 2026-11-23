@@ -10,7 +10,7 @@ Edit in the browser on your own machine. Or tell Claude, Codex or Cursor what yo
 
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-17BCCF?style=flat-square)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/hoodini/yuv-studio?style=flat-square&color=7A6BFF)](https://github.com/hoodini/yuv-studio/stargazers)
-[![MCP tools](https://img.shields.io/badge/MCP_tools-58-5DE1EE?style=flat-square)](docs/MCP.md)
+[![MCP tools](https://img.shields.io/badge/MCP_tools-59-5DE1EE?style=flat-square)](docs/MCP.md)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522-4645AA?style=flat-square)](https://nodejs.org)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-17BCCF?style=flat-square)](CONTRIBUTING.md)
 
@@ -34,7 +34,7 @@ Edit in the browser on your own machine. Or tell Claude, Codex or Cursor what yo
 
 Video editors were built for hands on a mouse. AI agents can write code, but they can't open Premiere.
 
-YUV.AI Studio makes **every edit an API call**. The same operations sit behind the editor, a REST API and 58 MCP tools, so an agent can do anything a person can do in the interface, and you see it happen on the timeline. When it's wrong, you undo it like any other edit.
+YUV.AI Studio makes **every edit an API call**. The same operations sit behind the editor, a REST API and 59 MCP tools, so an agent can do anything a person can do in the interface, and you see it happen on the timeline. When it's wrong, you undo it like any other edit.
 
 - **Yours.** It runs on `127.0.0.1`. Your footage never leaves your computer unless you choose a cloud service.
 - **Agent-native.** Not a chat bolted onto an editor: the editor *is* the API.
@@ -58,7 +58,7 @@ Open **http://127.0.0.1:5177** and drop a video on the window.
 
 > **Let an agent install it for you.** Paste [docs/AI_INSTALL_PROMPT.md](docs/AI_INSTALL_PROMPT.md) into Claude Code, Codex, Cursor or Gemini CLI. It installs what is missing, builds and starts the studio, connects itself over MCP and checks that everything works, on Windows, macOS or Linux.
 
-For captions: `pip install faster-whisper` to transcribe on your computer (add `opencv-python-headless` for the vertical reframe that follows the face), or paste an OpenAI, Groq or ElevenLabs key in the Captions tab. For narration, paste a voice key in the Voice tab ([docs/VOICE.md](docs/VOICE.md)).
+For captions: `pip install faster-whisper` to transcribe on your computer (add `opencv-python-headless` for the vertical reframe that follows the face, and `onnxruntime` or `onnxruntime-gpu` for background removal), or paste an OpenAI, Groq or ElevenLabs key in the Captions tab. For narration, paste a voice key in the Voice tab ([docs/VOICE.md](docs/VOICE.md)).
 
 ## 🔌 Connect your agent in one line
 
@@ -90,9 +90,10 @@ No agent? The editor has its own AI chat: bring a key for Claude, OpenAI, Grok, 
 | 🧹 **Filler words** | Cut "um", "uh", "אה", "אממ" and stutters in one click, in Hebrew and English (a word-for-word transcription keeps the fillers Whisper usually hides). |
 | 🎞️ **Shorts finder** | The AI reads a long video and picks the moments that stand alone as Reels, TikToks or Shorts, each with a title, hook and reason; one click makes a vertical project from it. |
 | 📱 **Vertical, following the face** | Reframe 16:9 to 9:16, 4:5 or 1:1 with keyframes that follow the speaker like a camera operator, editable on the timeline. |
+| 🧍 **Remove background** | No green screen: people separated from the background on your GPU, steady frame to frame. Blur it (portrait mode), put any video behind, or put **text behind the person**. |
 | 🎙️ **Clean voice** | Noise and hum reduction, levelling and loudness in one step. |
 | 🤖 **AI agent** | A chat inside the editor that edits while you watch. A glow around the frame and a guided cursor show each step. Plans to approve, changes to review. |
-| 🔌 **MCP + REST** | 58 MCP tools and a REST API over the same operations. Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI. |
+| 🔌 **MCP + REST** | 59 MCP tools and a REST API over the same operations. Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI. |
 | 💬 **Captions** | Hebrew and English, transcribed locally (faster-whisper) or in the cloud. Word-by-word highlight, 9 styles, an editor to fix mistakes. Captions follow your cuts. |
 | 🌍 **Translated captions** | Into Hebrew, English, Spanish, French, German, Italian, Portuguese or Russian, or two languages at once, timing kept. |
 | 🎙️ **Voice** | Narration from text in Hebrew or English. A voice library, or clone your own from a clip you choose. |
@@ -137,7 +138,7 @@ flowchart LR
   end
 
   you -- "UI" --> gate
-  agent -- "/mcp · 58 tools" --> gate
+  agent -- "/mcp · 59 tools" --> gate
   script -- "/api" --> gate
 
   ops -- "live events" --> you
@@ -171,7 +172,7 @@ Projects, uploads, exports and settings live in `data/`, which is not committed.
 | [Transcription](docs/TRANSCRIPTION.md) | Local Whisper, cloud providers, fixing captions |
 | [Voice and AI clips](docs/VOICE.md) | Narration and voice cloning, importing generated clips by link |
 | [AI agent](docs/AGENT.md) | The chat in the editor, providers and keys, plans, reviewing its changes |
-| [MCP server](docs/MCP.md) | Connect an AI client; the 58 tools; example prompts |
+| [MCP server](docs/MCP.md) | Connect an AI client; the 59 tools; example prompts |
 | [REST API](docs/API.md) | Endpoints and edit operations |
 | [Use it from anywhere](docs/REMOTE.md) | A private address on your own domain through a Cloudflare Tunnel |
 | [Architecture](docs/ARCHITECTURE.md) | Diagrams of the logic and the infrastructure |
@@ -200,6 +201,9 @@ YUV.AI Studio is free and open-source software under the **[GNU Affero General P
 </a>
 
 ## Credit
+
+Background removal uses [Robust Video Matting](https://github.com/PeterL1n/RobustVideoMatting) by Shanchuan Lin et al. (GPL-3.0); the model is downloaded from its official release on first use.
+
 
 Designed and built by **Yuval Avidani**: technologist and technical content creator, host of the AI segment on Channel 12 News, and founder of YUV.AI.
 

@@ -61,7 +61,9 @@ export async function probe(file: string) {
   }
   const duration = kind === 'image' ? 0 : Number(info.format?.duration || v?.duration || a?.duration || 0);
   const needsProxy = kind === 'video' && (!BROWSER_VIDEO.has(v.codec_name) || !BROWSER_CONTAINER.has(ext) || /10|12/.test(v.pix_fmt || '') || (height || 0) > 2160);
-  return { kind, width, height, fps, duration, hasAudio: !!a && kind !== 'image', needsProxy };
+  // VP8/VP9 in WebM mark their transparency with the alpha_mode tag (ffprobe reports the colour planes only).
+  const alpha = kind === 'video' && /^vp[89]$/.test(v.codec_name) && (String(v.tags?.alpha_mode ?? v.tags?.ALPHA_MODE ?? '') === '1' || /^yuva/.test(v.pix_fmt || ''));
+  return { kind, width, height, fps, duration, hasAudio: !!a && kind !== 'image', needsProxy, alpha };
 }
 
 export const assetCache = (assetId: string) => {
@@ -87,6 +89,7 @@ export async function importAsset(projectId: string, file: string, name?: string
     hasAudio: info.hasAudio,
     thumbs: info.kind === 'video' ? Math.max(1, Math.min(120, Math.ceil(info.duration))) : 0,
     size: fs.statSync(file).size,
+    ...(info.alpha ? { alpha: true } : {}),
   };
   mutate(projectId, (p) => void p.assets.push(asset), origin);
   if (asset.kind === 'video') void buildThumbs(asset).catch((e) => console.error('[thumbs]', e.message));

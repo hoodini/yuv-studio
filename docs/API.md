@@ -99,6 +99,7 @@ Text to speech and voice cloning through Cartesia: see [VOICE.md](VOICE.md) for 
 | `POST /api/projects/:id/cut-words` | `{ indices, language? }`: a job that cuts those words (indices from `/words`) and the pause after each |
 | `POST /api/projects/:id/remove-fillers` | `{ language?, aggressive?, dryRun? }`: a job; cuts hesitations and stutters (and soft fillers with `aggressive`) |
 | `POST /api/projects/:id/assets/:aid/enhance-voice` | `{ strength?: 'light' \| 'strong' }`: a job; a cleaned copy of the file replaces it on the timeline |
+| `POST /api/projects/:id/clips/:cid/remove-background` | `{ background?: 'none' \| 'blur' \| 'original', text?, quality?: 'quality' \| 'fast' }`: a job; the clip becomes a transparent VP9 WebM; `blur` / `original` put the original on a new layer below, `text` (with `original`) adds a title between them |
 | `POST /api/projects/:id/reframe` | `{ width?, height? }` (default 1080x1920): a job; reshapes the project and adds keyframes that follow the face |
 | `POST /api/projects/:id/find-shorts` | `{ count?, minSec?, maxSec?, language? }`: a job; uses the AI agent tab's model; result `{ clips: [{ start, end, title, hook, reason }] }` |
 | `POST /api/projects/:id/make-short` | `{ start, end, title?, width?, height?, reframe? }`: a job; result `{ projectId, editorUrl }` |

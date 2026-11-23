@@ -1,16 +1,18 @@
 // Server side of the smart tools: clean voice (ffmpeg), face tracking (OpenCV through server/faces.py),
-// and finding short clips in a long video (the text model chosen in the AI agent tab).
+// finding short clips in a long video (the text model chosen in the AI agent tab), and background removal
+// (Robust Video Matting through server/matte.py).
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cutRange, newProject, reshapeProject } from '../shared/ops';
+import { addTextClip, addTrack, cutRange, moveTrack, newProject, reshapeProject } from '../shared/ops';
 import { followKeyframes } from '../shared/smart';
 import type { FaceSample } from '../shared/smart';
 import type { Asset, Project, Word } from '../shared/types';
 import { clipEnd, projectDuration } from '../shared/types';
 import { completeText } from './agent';
 import { assetCache, FFMPEG, importAsset, mediaExt, run } from './media';
-import { DIRS, loadProject, mutate, saveProject } from './store';
+import crypto from 'node:crypto';
+import { DATA, DIRS, loadProject, mutate, saveProject } from './store';
 import { checkPython } from './transcribe';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -191,4 +193,123 @@ export async function makeShort(projectId: string, o: { start: number; end: numb
   if (o.reframe !== false) reframed = await autoReframe(copy.id, o.width || 1080, o.height || 1920, (f, m) => update(0.1 + f * 0.9, m));
   update(1, 'Short ready');
   return { projectId: copy.id, name: copy.name, duration: round(end - start), reframed, editorUrl: `/?project=${copy.id}` };
+}
+
+// ---------- background removal ----------
+
+/**
+ * Robust Video Matting (Lin et al., GPL-3.0), the ONNX exports from its official release. Downloaded once on first
+ * use into data/models and checked against these hashes, so a changed or corrupted file is never run.
+ */
+const MATTE_MODELS = {
+  quality: { file: 'rvm_resnet50_fp32.onnx', bytes: 107479165, sha256: '25db300fcb6ee27f941a1b52c97856e8d1f13c7f35817f81a612f89af0e8a85c' },
+  fast: { file: 'rvm_mobilenetv3_fp32.onnx', bytes: 14975696, sha256: '88d4531297118f595bf2fd60f6f566aec2e559393802d1f436c380f0cbbd2828' },
+} as const;
+export type MatteQuality = keyof typeof MATTE_MODELS;
+const MODEL_DIR = path.join(DATA, 'models');
+
+const sha256 = (file: string) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+
+async function matteModel(quality: MatteQuality, update: Update): Promise<string> {
+  const m = MATTE_MODELS[quality];
+  const file = path.join(MODEL_DIR, m.file);
+  if (fs.existsSync(file) && fs.statSync(file).size === m.bytes && sha256(file) === m.sha256) return file;
+  fs.mkdirSync(MODEL_DIR, { recursive: true });
+  const label = `Downloading the background removal model (${Math.round(m.bytes / 1e6)} MB, only once)`;
+  update(0.01, label);
+  const res = await fetch(`https://github.com/PeterL1n/RobustVideoMatting/releases/download/v1.0.0/${m.file}`);
+  if (!res.ok || !res.body) throw new Error(`Could not download the background removal model (${res.status}). Check the internet connection.`);
+  const tmp = `${file}.part`;
+  const out = fs.createWriteStream(tmp);
+  let got = 0;
+  for await (const chunk of res.body as any as AsyncIterable<Uint8Array>) {
+    got += chunk.length;
+    if (got > m.bytes) break;
+    out.write(chunk);
+    update(0.01 + 0.14 * (got / m.bytes), label);
+  }
+  await new Promise((r) => out.end(r));
+  if (fs.statSync(tmp).size !== m.bytes || sha256(tmp) !== m.sha256) {
+    fs.rmSync(tmp, { force: true });
+    throw new Error('The downloaded background removal model did not match its checksum and was deleted. Try again.');
+  }
+  fs.renameSync(tmp, file);
+  return file;
+}
+
+/**
+ * Take the background out from behind the people in a video clip. The part of the source the clip uses becomes a
+ * transparent video (VP9 WebM with alpha, sound kept) that replaces it on the timeline. What goes behind the person:
+ * - 'none': whatever is on the layers below (or black);
+ * - 'blur': the original, blurred, on a new layer just below (portrait mode);
+ * - 'original': the original, untouched, on a layer below, so a title put between the two layers appears behind
+ *   the person. With `text`, that title is added right away.
+ */
+export async function removeBackground(
+  projectId: string,
+  clipId: string,
+  o: { background?: 'none' | 'blur' | 'original'; text?: string; quality?: MatteQuality },
+  update: Update,
+) {
+  const p = loadProject(projectId);
+  const track = p.tracks.find((t) => t.clips.some((c) => c.id === clipId));
+  const clip = track?.clips.find((c) => c.id === clipId);
+  if (!track || !clip) throw Object.assign(new Error(`Clip not found: ${clipId}`), { status: 404 });
+  const asset = p.assets.find((a) => a.id === clip.assetId);
+  if (!asset || asset.kind !== 'video' || clip.type !== 'video') throw Object.assign(new Error('Background removal works on video clips.'), { status: 400 });
+  if (asset.alpha) throw Object.assign(new Error('This clip already has its background removed.'), { status: 400 });
+  const py = await checkPython();
+  if (!py) throw Object.assign(new Error('Background removal needs Python with ONNX Runtime: pip install onnxruntime (or onnxruntime-gpu for an NVIDIA GPU)'), { status: 400 });
+  const model = await matteModel(o.quality === 'fast' ? 'fast' : 'quality', update);
+  // At most 1920 on the long side (4K would be slow and the preview would not gain from it), even sizes for VP9.
+  const aw = asset.width || 1920;
+  const ah = asset.height || 1080;
+  const k = Math.min(1, 1920 / Math.max(aw, ah));
+  const w = Math.max(2, Math.round((aw * k) / 2) * 2);
+  const h = Math.max(2, Math.round((ah * k) / 2) * 2);
+  const fps = Math.min(60, asset.fps || p.fps || 30);
+  const len = clip.duration * clip.speed;
+  const out = path.join(DIRS.media, `${path.basename(asset.path).replace(/\.[^.]+$/, '')}_nobg_${clipId.replace(/[^\w-]/g, '')}.webm`);
+  update(0.15, 'Removing the background');
+  await run(py, [path.join(HERE, 'matte.py'), FFMPEG, asset.path, String(clip.in), String(len), String(fps), String(w), String(h), model, out], {
+    onStdout: (s) => {
+      for (const line of s.split(/\r?\n/)) {
+        const m = /^PROGRESS ([\d.]+)/.exec(line);
+        if (m) update(0.15 + 0.8 * Number(m[1]), 'Removing the background');
+      }
+    },
+  }).catch((e) => {
+    if (/No module named 'onnxruntime'/.test(String(e.message))) throw Object.assign(new Error('Background removal needs ONNX Runtime: pip install onnxruntime (or onnxruntime-gpu for an NVIDIA GPU)'), { status: 400 });
+    throw e;
+  });
+  const cut = await importAsset(projectId, out, `${asset.name} · no background`);
+  const background = o.background || 'none';
+  const result = mutate(projectId, (d) => {
+    const t = d.tracks.find((x) => x.clips.some((c) => c.id === clipId));
+    const c = t?.clips.find((x) => x.id === clipId);
+    if (!t || !c) throw new Error('The clip is gone. Try again.');
+    const original = structuredClone(c);
+    c.assetId = cut.id;
+    c.in = 0;
+    let behindTrackId: string | undefined;
+    let textClipId: string | undefined;
+    if (background === 'blur' || background === 'original') {
+      // The original goes on a new layer right below, at the same place and time; its sound stays on the top clip.
+      const below = addTrack(d, 'video', background === 'blur' ? 'Background (blurred)' : 'Background');
+      moveTrack(d, below.id, d.tracks.indexOf(t) + 1);
+      const copy = { ...original, id: `${original.id}_bg`, muted: true, ...(background === 'blur' ? { fx: { ...original.fx, blur: Math.max(original.fx?.blur || 0, 18) } } : {}) };
+      below.clips.push(copy);
+      behindTrackId = below.id;
+      if (o.text && background === 'original') {
+        // A text layer between the person and the original: the title shows behind the person.
+        const between = addTrack(d, 'text', 'Text behind');
+        moveTrack(d, between.id, d.tracks.indexOf(t) + 1);
+        // Big and high in the frame, the classic look: the head covers part of the word.
+        textClipId = addTextClip(d, { text: o.text, preset: 'display', start: c.start, duration: Math.min(c.duration, 4), trackId: between.id, transform: { y: 0.3, scale: 1.7 } }).id;
+      }
+    }
+    return { clipId, assetId: cut.id, background, behindTrackId, textClipId };
+  });
+  update(1, 'Background removed');
+  return result;
 }

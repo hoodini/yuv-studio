@@ -53,6 +53,7 @@ export const api = {
   cutWords: (id: string, body: { indices: number[]; language?: string }) => req<Job>('POST', `/api/projects/${id}/cut-words`, body),
   removeFillers: (id: string, body: { language?: string; aggressive?: boolean; dryRun?: boolean }) => req<Job>('POST', `/api/projects/${id}/remove-fillers`, body),
   enhanceVoice: (id: string, assetId: string, strength: 'light' | 'strong') => req<Job>('POST', `/api/projects/${id}/assets/${assetId}/enhance-voice`, { strength }),
+  removeBackground: (id: string, clipId: string, body: { background: 'none' | 'blur' | 'original'; text?: string; quality?: 'quality' | 'fast' }) => req<Job>('POST', `/api/projects/${id}/clips/${clipId}/remove-background`, body),
   reframe: (id: string, body: { width: number; height: number }) => req<Job>('POST', `/api/projects/${id}/reframe`, body),
   findShorts: (id: string, body: { count?: number; minSec?: number; maxSec?: number; language?: string }) => req<Job>('POST', `/api/projects/${id}/find-shorts`, body),
   makeShort: (id: string, body: { start: number; end: number; title?: string }) => req<Job>('POST', `/api/projects/${id}/make-short`, body),

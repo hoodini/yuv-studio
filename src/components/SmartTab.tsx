@@ -1,6 +1,6 @@
 // The smart tools: edit by deleting text, remove filler words, clean the voice, reframe to vertical following the
 // face, and find the moments of a long video that work as shorts. Each runs as a job on the server.
-import { Eraser, Mic2, Scissors, Smartphone, Sparkles, TextCursorInput } from 'lucide-react';
+import { Eraser, Mic2, Scissors, Smartphone, Sparkles, TextCursorInput, UserRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Job } from '../../shared/types';
 import { actions } from '../actions';
@@ -277,6 +277,64 @@ function Shorts({ language, L }: { language: string; L: (h: string, e: string) =
   );
 }
 
+function RemoveBackground({ L }: { L: (h: string, e: string) => string }) {
+  const project = useStore((s) => s.project)!;
+  const selection = useStore((s) => s.selection);
+  const [background, setBackground] = useState<'none' | 'blur' | 'original'>('blur');
+  const [text, setText] = useState('');
+  const [quality, setQuality] = useState<'quality' | 'fast'>('quality');
+  // The selected video clip, else the first clip of the main video layer.
+  const videoClips = project.tracks.filter((t) => t.kind === 'video').flatMap((t) => t.clips.filter((c) => c.type === 'video'));
+  // Not the background copies a removal puts on a lower layer (their ids end in _bg).
+  const main = [...project.tracks].reverse().filter((t) => t.kind === 'video').flatMap((t) => t.clips.filter((c) => c.type === 'video' && !c.id.endsWith('_bg')));
+  const clip = videoClips.find((c) => selection.includes(c.id)) || main[0];
+  const asset = clip ? project.assets.find((a) => a.id === clip.assetId) : undefined;
+  const job = useJob(() => useStore.getState().notify(L('הרקע הוסר', 'Background removed')));
+  if (!clip || !asset) return <p className="hint">{L('אין קליפ וידאו בציר הזמן.', 'There is no video clip on the timeline.')}</p>;
+  const done = !!asset.alpha;
+  const seconds = Math.round(clip.duration);
+  return (
+    <>
+      <p className="hint">{L('מפריד את האנשים מהרקע בלי מסך ירוק, פריים אחרי פריים ובלי ריצודים. אחר כך אפשר לטשטש את הרקע, לשים מאחור כל תמונה או וידאו, או טקסט שמופיע מאחורי הדובר.', 'Separates the people from the background with no green screen, frame by frame and without flicker. Then blur the background, put any picture or video behind, or text that appears behind the speaker.')}</p>
+      <p className="hint">
+        <b dir="auto">{asset.name}</b> · {seconds}s{selection.includes(clip.id) ? '' : L(' (סמנו קליפ בציר הזמן כדי לבחור אחר)', ' (select a clip on the timeline to pick another)')}
+      </p>
+      {done ? (
+        <p className="hint">{L('לקליפ הזה כבר הוסר הרקע.', 'This clip already has its background removed.')}</p>
+      ) : (
+        <>
+          <label>
+            <span>{L('מה יהיה מאחור', 'What goes behind')}</span>
+            <select value={background} onChange={(e) => setBackground(e.target.value as any)}>
+              <option value="blur">{L('הרקע המקורי מטושטש (מצב פורטרט)', 'The original, blurred (portrait mode)')}</option>
+              <option value="original">{L('הרקע המקורי, עם טקסט מאחורי הדובר', 'The original, with text behind the speaker')}</option>
+              <option value="none">{L('שקוף: השכבות שמתחת (תמונה, וידאו, צבע)', 'Transparent: the layers below (picture, video, colour)')}</option>
+            </select>
+          </label>
+          {background === 'original' && (
+            <label>
+              <span>{L('הטקסט שמאחורי הדובר', 'The text behind the speaker')}</span>
+              <input dir="auto" value={text} onChange={(e) => setText(e.target.value)} placeholder={L('למשל: עכשיו בחינם', 'e.g. NOW FREE')} />
+            </label>
+          )}
+          <label>
+            <span>{L('איכות', 'Quality')}</span>
+            <select value={quality} onChange={(e) => setQuality(e.target.value as any)}>
+              <option value="quality">{L('גבוהה (מומלץ עם כרטיס מסך)', 'High (best with a GPU)')}</option>
+              <option value="fast">{L('מהירה', 'Fast')}</option>
+            </select>
+          </label>
+          <button className="pill wide strong" onClick={() => void job.start((id) => api.removeBackground(id, clip.id, { background, text: background === 'original' ? text.trim() || undefined : undefined, quality }))} disabled={job.running}>
+            <UserRound size={17} /> {job.running ? `${Math.round((job.job?.progress || 0) * 100)}%` : L('להסיר רקע', 'Remove background')}
+          </button>
+          <Progress job={job.job} />
+          {!job.running && <p className="hint">{L(`עם כרטיס מסך זה לוקח בערך כמו אורך הקליפ (${seconds} שניות). בפעם הראשונה המודל יורד (15-107MB).`, `With a GPU it takes about as long as the clip (${seconds} seconds). The first time, the model downloads (15-107 MB).`)}</p>}
+        </>
+      )}
+    </>
+  );
+}
+
 export function SmartTab() {
   const { isHe } = useT();
   const L = (h: string, e: string) => (isHe ? h : e);
@@ -296,6 +354,9 @@ export function SmartTab() {
       </Section>
       <Section icon={Sparkles} title={L('קליפים קצרים מסרטון ארוך', 'Shorts from a long video')}>
         <Shorts language={language} L={L} />
+      </Section>
+      <Section icon={UserRound} title={L('הסרת רקע', 'Remove background')}>
+        <RemoveBackground L={L} />
       </Section>
       <Section icon={Smartphone} title={L('אנכי עם מעקב פנים', 'Vertical, following the face')}>
         <Reframe L={L} />
