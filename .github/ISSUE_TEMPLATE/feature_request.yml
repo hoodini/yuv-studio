@@ -1,0 +1,22 @@
+name: Feature idea
+description: Something you would like the studio, its agent or its MCP tools to do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: The video or the workflow, and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+      description: How you imagine it in the editor, or as an MCP tool or API call.
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contributing
+      options:
+        - label: I would like to build this myself

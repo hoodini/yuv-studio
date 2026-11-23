@@ -1,38 +1,107 @@
 <div align="center">
 
-<img src="public/brand/mark-128.png" width="88" alt="" />
+<img src="docs/assets/banner.jpg" alt="YUV.AI Studio: the open-source video editor your AI agent can drive" width="100%" />
 
 # YUV.AI Studio
 
-**A video editor that runs in your browser, on your own machine, and edits together with an AI agent.**
+### The open-source video editor your AI agent can drive.
 
-Cut · Hebrew and English captions · narration · export at up to 60 fps · REST API · 51 MCP tools · works on your phone
+Edit in the browser on your own machine. Or tell Claude, Codex or Cursor what you want, and watch it cut, caption and export **live, inside the editor**.
 
-[Quick start](#quick-start) · [What it does](#what-it-does) · [Guides](#guides) · [How it works](#how-it-works) · [License](#license)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-17BCCF?style=flat-square)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/hoodini/yuv-studio?style=flat-square&color=7A6BFF)](https://github.com/hoodini/yuv-studio/stargazers)
+[![MCP tools](https://img.shields.io/badge/MCP_tools-51-5DE1EE?style=flat-square)](docs/MCP.md)
+[![Node](https://img.shields.io/badge/node-%E2%89%A522-4645AA?style=flat-square)](https://nodejs.org)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-17BCCF?style=flat-square)](CONTRIBUTING.md)
+
+[**Quick start**](#-quick-start) · [**Connect your agent**](#-connect-your-agent-in-one-line) · [What it does](#-what-it-does) · [How it works](#-how-it-works) · [Guides](#-guides) · [License](#-license)
 
 </div>
 
-![The editor: preview, layers on the timeline, captions with word highlight](docs/screenshots/editor.png)
+<br />
 
-## What it does
+<div align="center">
+
+<img src="docs/assets/demo.gif" alt="An AI agent adds captions, a title, a zoom and a sound effect over MCP while the editor updates live" width="100%" />
+
+<sub>Real time, not sped up: an agent sends MCP tool calls and the open editor follows each one. <a href="docs/assets/demo.mp4">Watch the sharp MP4</a>.</sub>
+
+</div>
+
+<br />
+
+## ✦ Why this exists
+
+Video editors were built for hands on a mouse. AI agents can write code, but they can't open Premiere.
+
+YUV.AI Studio makes **every edit an API call**. The same operations sit behind the editor, a REST API and 51 MCP tools, so an agent can do anything a person can do in the interface, and you see it happen on the timeline. When it's wrong, you undo it like any other edit.
+
+- **Yours.** It runs on `127.0.0.1`. Your footage never leaves your computer unless you choose a cloud service.
+- **Agent-native.** Not a chat bolted onto an editor: the editor *is* the API.
+- **Free.** AGPL-3.0, no watermark, no account, no export limits.
+- **Hebrew and English.** Right-to-left captions done right, word-by-word highlight, in both languages.
+
+I released it on my birthday, 23 November 2026, as a gift to everyone who makes videos. If it saves you an evening, [a ⭐ helps other people find it](https://github.com/hoodini/yuv-studio/stargazers).
+
+## ⚡ Quick start
+
+You need [Node.js](https://nodejs.org) 22+, `ffmpeg` and `ffprobe` on your PATH, and Chrome or Edge (it draws the text layer during export).
+
+```bash
+git clone https://github.com/hoodini/yuv-studio.git
+cd yuv-studio
+npm install && npm run build
+npm start
+```
+
+Open **http://127.0.0.1:5177** and drop a video on the window.
+
+> **Let an agent install it for you.** Paste [docs/AI_INSTALL_PROMPT.md](docs/AI_INSTALL_PROMPT.md) into Claude Code, Codex, Cursor or Gemini CLI. It installs what is missing, builds and starts the studio, connects itself over MCP and checks that everything works, on Windows, macOS or Linux.
+
+For captions: `pip install faster-whisper` to transcribe on your computer, or paste an OpenAI, Groq or ElevenLabs key in the Captions tab. For narration, paste a voice key in the Voice tab ([docs/VOICE.md](docs/VOICE.md)).
+
+## 🔌 Connect your agent in one line
+
+With the studio running:
+
+```bash
+# Claude Code
+claude mcp add --transport http --scope user yuv-studio http://127.0.0.1:5177/mcp
+
+# Codex
+codex mcp add yuv-studio --url http://127.0.0.1:5177/mcp
+```
+
+Cursor, VS Code, Claude Desktop and Gemini CLI are in [docs/MCP.md](docs/MCP.md). Then ask for things like:
+
+```text
+Import ~/Videos/launch.mp4, cut the silences, add Hebrew captions with word highlight,
+put a big title at the start, punch in on the demo at 0:42, and export for Reels.
+```
+
+No agent? The editor has its own AI chat: bring a key for Claude, OpenAI, Grok, Groq, OpenRouter or Together, or run a local model with Ollama or LM Studio. Big edits wait for your approval of the plan, and every change comes back as a review you can keep or take back one by one.
+
+## 🎬 What it does
 
 | | |
 |---|---|
-| **Cut** | Trim the start and the end, split anywhere, delete with the gap closed, mark a range with `I` / `O` (or `[` / `]`) and cut it from every track, remove silences automatically. Export only what is left. |
-| **AI agent** | A chat in the editor that edits while you watch, with your own key for Claude, OpenAI, Grok, Groq, OpenRouter, Together, or a local model (Ollama, LM Studio). A glow around the frame and a guided cursor show each step it takes. Big edits wait for your approval of its plan, and its edits come back as a review: each change marked on the timeline, kept or taken back on its own. |
-| **MCP and REST** | Every edit is an API call and one of 51 MCP tools. Connect Claude Code, Claude Desktop, Codex, Cursor, VS Code or Gemini CLI, and the open editor shows the agent working live. |
-| **Captions** | Hebrew and English. Transcribed on your computer (faster-whisper) or through an API when there is no GPU. Word-by-word highlight, 9 styles, and an editor to fix what the transcription got wrong. Captions follow your cuts. |
-| **Translated captions** | Captions in another language than the speech (Hebrew, English, Spanish, French, German, Italian, Portuguese, Russian), or two languages at once, each caption keeping its timing. |
-| **Voice** | Narration from text, in Hebrew or English, placed at the playhead. Pick a voice from the library or clone your own from a clip you choose. |
-| **On your phone** | A mobile mode: upload from the gallery (resumable, no 100 MB limit), make and fix captions, translate them, pick a look, ask the agent, and export for Reels, TikTok, Shorts or YouTube. Installs to the home screen. The work runs on your computer. |
-| **Layers** | Video, B-roll, image overlays, audio, titles. Drag, resize and rotate anything directly on the preview. Drag a clip in between others and they move to make room. |
-| **Motion** | Zooms and keyframes on any clip or title: position, size, rotation and opacity, with easing. `K` puts a keyframe at the playhead. Ready-made slow zooms and punch-ins. |
-| **Speed** | 0.25× to 4× per clip (or any value from 0.1× to 8×). |
-| **Style** | 9 title styles, text animations, colour looks, 15 transitions, 26 built-in sound effects, blend modes, any Google Fonts family or your own fonts. |
-| **Free stock** | B-roll, overlays, photos, music and sound effects from Pexels, Pixabay and Openverse, searched inside the editor, with each licence and credit kept. |
-| **Export** | MP4 (H.264 + AAC) up to 60 fps, with presets for YouTube, Shorts, Reels, TikTok, Instagram, X and LinkedIn, fit-or-fill reframing and a safe-zone preview. The text is drawn by the same code in the preview and in the export, so they match. |
+| ✂️ **Cut** | Trim, split, delete with the gap closed, mark a range with `I` / `O` and cut it from every track, remove silences automatically. |
+| 🤖 **AI agent** | A chat inside the editor that edits while you watch. A glow around the frame and a guided cursor show each step. Plans to approve, changes to review. |
+| 🔌 **MCP + REST** | 51 MCP tools and a REST API over the same operations. Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI. |
+| 💬 **Captions** | Hebrew and English, transcribed locally (faster-whisper) or in the cloud. Word-by-word highlight, 9 styles, an editor to fix mistakes. Captions follow your cuts. |
+| 🌍 **Translated captions** | Into Hebrew, English, Spanish, French, German, Italian, Portuguese or Russian, or two languages at once, timing kept. |
+| 🎙️ **Voice** | Narration from text in Hebrew or English. A voice library, or clone your own from a clip you choose. |
+| 📱 **On your phone** | Upload from the gallery (resumable, no 100 MB limit), caption, translate, ask the agent, export for Reels, TikTok, Shorts or YouTube. Installs to the home screen. |
+| 🧱 **Layers + motion** | Video, B-roll, images, audio, titles. Drag, resize and rotate on the preview. Keyframes with easing, zooms and punch-ins, 0.1× to 8× speed. |
+| 🎨 **Style** | 9 title styles, text animations, colour looks, 15 transitions, 26 sound effects, blend modes, any Google Font or your own. |
+| 🖼️ **Free stock** | B-roll, photos, music and sound effects from Pexels, Pixabay and Openverse, with licences and credits kept. |
+| 📤 **Export** | MP4 (H.264 + AAC) up to 60 fps. Presets for YouTube, Shorts, Reels, TikTok, Instagram, X and LinkedIn, with fit-or-fill reframing and safe zones. Preview and export draw text with the same code, so they match. |
 
-The interface is in Hebrew and English.
+<details>
+<summary><b>📸 Screenshots</b></summary>
+<br />
+
+![The editor: preview, layers on the timeline, captions with word highlight](docs/screenshots/editor.png)
 
 | Fix the transcription | Narration and voices |
 |---|---|
@@ -42,47 +111,11 @@ The interface is in Hebrew and English.
 |---|---|
 | ![Title presets and the text inspector](docs/screenshots/titles.png) | ![Sound library and a clip's transitions](docs/screenshots/sounds-transitions.png) |
 
-## Quick start
+</details>
 
-You need [Node.js](https://nodejs.org) 22 or newer, `ffmpeg` and `ffprobe` on your PATH, and Chrome or Edge (it draws the text layer during export).
+## 🧠 How it works
 
-```bash
-git clone https://github.com/hoodini/yuv-studio.git
-cd yuv-studio
-npm install
-npm run build
-npm start
-```
-
-Open http://127.0.0.1:5177 and drop a video on the window.
-
-For captions, pick one:
-
-- **On this computer:** `pip install faster-whisper` (a GPU with CUDA makes it fast; it also runs on CPU, slowly).
-- **Through an API:** open the Captions tab, press the settings icon and paste an OpenAI, Groq or ElevenLabs key.
-
-For narration, open the Voice tab and paste the key of the voice service (see [docs/VOICE.md](docs/VOICE.md)).
-
-**Or let an AI agent do all of it:** paste the prompt in [docs/AI_INSTALL_PROMPT.md](docs/AI_INSTALL_PROMPT.md) into Claude Code, Codex, Cursor or Gemini CLI. It installs what is missing, builds and starts the studio, connects itself over MCP and checks that everything works.
-
-## Guides
-
-| | |
-|---|---|
-| [What's new](CHANGELOG.md) | What changed in each version |
-| [Using the editor](docs/USER_GUIDE.md) | Cutting, layers, captions, shortcuts |
-| [Transcription](docs/TRANSCRIPTION.md) | Local Whisper, cloud providers, fixing captions |
-| [Voice and AI clips](docs/VOICE.md) | Narration and voice cloning, importing generated clips by link |
-| [AI agent](docs/AGENT.md) | The chat in the editor, providers and keys, plans to approve, reviewing its changes |
-| [MCP server](docs/MCP.md) | Connect an AI client; the 51 tools; example prompts |
-| [REST API](docs/API.md) | Endpoints and edit operations |
-| [Use it from anywhere](docs/REMOTE.md) | A private address on your own domain through a Cloudflare Tunnel |
-| [Architecture](docs/ARCHITECTURE.md) | Diagrams of the logic and the infrastructure |
-| [AI install prompt](docs/AI_INSTALL_PROMPT.md) | One prompt that makes an agent install everything, on Windows, macOS or Linux |
-
-## How it works
-
-One project model and one set of edit operations sit in the middle. The editor, the REST API and the MCP server are three doors to the same operations, which is why an agent can do anything a person can do in the interface, and why the open editor follows along live.
+One project model and one set of edit operations sit in the middle. The editor, the REST API and the MCP server are three doors to the same operations, which is why an agent can do anything a person can do, and why the open editor follows along live.
 
 ```mermaid
 flowchart LR
@@ -124,23 +157,42 @@ flowchart LR
 
 Projects, uploads, exports and settings live in `data/`, which is not committed. Copy `.env.example` to `.env` to configure the port, the data folder, Whisper models, keys and remote access.
 
-## Security
+## 📚 Guides
 
-The studio listens on `127.0.0.1` and refuses requests from other websites and other host names. It can read any file path it is given on the local machine, which is what lets an agent import footage from anywhere on the disk, so never put it on a network without the access token or Cloudflare Access described in [docs/REMOTE.md](docs/REMOTE.md).
+| | |
+|---|---|
+| [What's new](CHANGELOG.md) | What changed in each version |
+| [Using the editor](docs/USER_GUIDE.md) | Cutting, layers, captions, shortcuts |
+| [Transcription](docs/TRANSCRIPTION.md) | Local Whisper, cloud providers, fixing captions |
+| [Voice and AI clips](docs/VOICE.md) | Narration and voice cloning, importing generated clips by link |
+| [AI agent](docs/AGENT.md) | The chat in the editor, providers and keys, plans, reviewing its changes |
+| [MCP server](docs/MCP.md) | Connect an AI client; the 51 tools; example prompts |
+| [REST API](docs/API.md) | Endpoints and edit operations |
+| [Use it from anywhere](docs/REMOTE.md) | A private address on your own domain through a Cloudflare Tunnel |
+| [Architecture](docs/ARCHITECTURE.md) | Diagrams of the logic and the infrastructure |
+| [AI install prompt](docs/AI_INSTALL_PROMPT.md) | One prompt that makes an agent install everything |
 
-Found a vulnerability? Please report it privately, as described in [SECURITY.md](SECURITY.md).
+## 🤝 Contributing
 
-## License
+Bug reports, ideas and pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md); a good first contribution is a new caption style, a title preset, a transition or an export preset. Contributors sign a [CLA](CLA.md) once, so the project can keep offering both the AGPL and a commercial license.
 
-YUV.AI Studio is free and open-source software under the **[GNU Affero General Public License v3.0](LICENSE)**. You may use, study, change and share it. If you run a modified version as a service for other people, the AGPL requires you to offer them its source code.
+## 🔒 Security
 
-**Need other terms?** A commercial license is available for companies that want to embed the studio in a closed product or offer it as a service without the AGPL's obligations. Open an issue or contact YUV.AI to ask.
+The studio listens on `127.0.0.1` and refuses requests from other websites and host names. It can read any file path it is given on the local machine (that is how an agent imports footage from anywhere on the disk), so never expose it to a network without the access token or Cloudflare Access described in [docs/REMOTE.md](docs/REMOTE.md). Found a vulnerability? Report it privately, as described in [SECURITY.md](SECURITY.md).
 
-**Hosted version.** A hosted YUV.AI Studio, with rendering, transcription and the AI agent ready to use and nothing to install, is in the works.
+## 📜 License
 
-**Contributing.** Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Contributors sign a [CLA](CLA.md) once, so the project can keep offering both the AGPL and the commercial license.
+YUV.AI Studio is free and open-source software under the **[GNU Affero General Public License v3.0](LICENSE)**. Use it, study it, change it and share it. If you run a modified version as a service for other people, the AGPL requires you to offer them its source code.
 
-**Name and logo.** "YUV.AI" and "YUV.AI Studio" and the YUV.AI logos are trademarks and are not covered by the AGPL; forks need their own name. See [TRADEMARK.md](TRADEMARK.md).
+- **Need other terms?** A commercial license is available for companies that want to embed the studio in a closed product or offer it as a service without the AGPL's obligations. Open an issue or contact YUV.AI.
+- **Hosted version.** A hosted YUV.AI Studio, with rendering, transcription and the agent ready to use and nothing to install, is in the works.
+- **Name and logo.** "YUV.AI" and "YUV.AI Studio" and the YUV.AI logos are trademarks, not covered by the AGPL; forks need their own name. See [TRADEMARK.md](TRADEMARK.md).
+
+## ⭐ Star history
+
+<a href="https://star-history.com/#hoodini/yuv-studio&Date">
+  <img src="https://api.star-history.com/svg?repos=hoodini/yuv-studio&type=Date&theme=dark" alt="Star history of hoodini/yuv-studio" width="100%" />
+</a>
 
 ## Credit
 

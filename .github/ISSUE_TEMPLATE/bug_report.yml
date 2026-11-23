@@ -1,0 +1,50 @@
+name: Bug report
+description: Something in the studio does not work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time. For a security problem, please do not open an issue; follow SECURITY.md instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Drop a video on the window
+        2. Open the Captions tab
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      multiple: true
+      options:
+        - Editor (desktop browser)
+        - Mobile mode
+        - Export
+        - Captions / transcription
+        - Voice
+        - AI agent chat
+        - MCP
+        - REST API
+        - Install / build
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: Windows 11, Node 22.12, Chrome 140, ffmpeg 7.1
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: The server output or the browser console, if there is an error. Remove keys and personal paths first.
+      render: text
