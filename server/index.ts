@@ -27,6 +27,8 @@ import { loadSettings, publicSettings, saveSettings } from './settings';
 import { checkPython, transcribe, transcriptionStatus } from './transcribe';
 import type { Lang } from './transcribe';
 import { cloneVoice, listVoices, speak, voicePreview } from './voice';
+import { autoReframe, enhanceVoice, findShorts, makeShort } from './smart';
+import { cutRanges, findFillers, wordCutRanges } from '../shared/smart';
 
 const PORT = Number(process.env.PORT || 5177);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -403,7 +405,7 @@ app.get('/api/projects/:id/assets/:aid/peaks', wrap((req) => getPeaks(asset(load
 // ---------- transcription and captions ----------
 
 /** Transcribe every source that is audible on the timeline. */
-async function transcripts(p: Project, language: Lang, update: (f: number, m?: string) => void, opts: { force?: boolean; engine?: string } = {}) {
+async function transcripts(p: Project, language: Lang, update: (f: number, m?: string) => void, opts: { force?: boolean; engine?: string; verbatim?: boolean } = {}) {
   const ids = new Set<string>();
   for (const t of p.tracks) if (!t.muted && (t.kind === 'video' || t.kind === 'audio')) for (const c of t.clips) if (c.assetId && !c.muted) ids.add(c.assetId);
   const used = p.assets.filter((a) => ids.has(a.id) && a.hasAudio && !a.path.startsWith(DIRS.sfx));
@@ -618,6 +620,98 @@ app.post(
     for (const a of p.assets) if (a.hasAudio && !a.path.startsWith(DIRS.sfx)) peaks[a.id] = await getPeaks(a);
     if (req.body.dryRun) return { ranges: findSilences(p, peaks, req.body) };
     return mutate(p.id, (draft) => removeSilences(draft, peaks, req.body), origin(req));
+  }),
+);
+
+// ---------- smart tools: words, fillers, clean voice, reframe, shorts ----------
+
+/** The spoken words on the timeline, with timeline times and the fillers marked: the transcript editor's data. */
+app.post(
+  '/api/projects/:id/words',
+  wrap((req) => {
+    const p = loadProject(pid(req));
+    const b = req.body || {};
+    return startJob('smart', p.id, async (update) => {
+      const words = timelineWords(loadProject(p.id), await transcripts(p, lang(b.language), update, { engine: b.engine, verbatim: true }));
+      const fillers = findFillers(words, { aggressive: !!b.aggressive });
+      const mark = new Map<number, string>();
+      for (const f of fillers) for (let k = 0; k < f.n; k++) mark.set(f.i + k, f.kind);
+      const r = (n: number) => Math.round(n * 1000) / 1000;
+      return { words: words.map((w, i) => ({ i, t0: r(w.t0), t1: r(w.t1), text: w.text, filler: mark.get(i) })), fillers: fillers.length };
+    });
+  }),
+);
+/** Cut the "um"s, the stutters and (aggressive) the soft fillers like "basically" / "כאילו". */
+app.post(
+  '/api/projects/:id/remove-fillers',
+  wrap((req) => {
+    const p = loadProject(pid(req));
+    const b = req.body || {};
+    return startJob('smart', p.id, async (update) => {
+      const tr = await transcripts(p, lang(b.language), (f, m) => update(f * 0.9, m), { engine: b.engine, verbatim: true });
+      const words = timelineWords(loadProject(p.id), tr);
+      const fillers = findFillers(words, { aggressive: !!b.aggressive });
+      const ranges = wordCutRanges(words, fillers);
+      const list = fillers.map((f) => ({ text: f.text, kind: f.kind, start: Math.round(f.t0 * 100) / 100 }));
+      if (b.dryRun) return { fillers: list, ranges };
+      const done = mutate(p.id, (draft) => cutRanges(draft, ranges), origin(req));
+      return { ...done, fillers: list };
+    });
+  }),
+);
+/** Cut words by their index in the words list (from /words): editing the video by deleting text. */
+app.post(
+  '/api/projects/:id/cut-words',
+  wrap((req) => {
+    const p = loadProject(pid(req));
+    const b = req.body || {};
+    return startJob('smart', p.id, async (update) => {
+      const words = timelineWords(loadProject(p.id), await transcripts(p, lang(b.language), update, { engine: b.engine, verbatim: true }));
+      const idx = (Array.isArray(b.indices) ? b.indices : []).map(Number).filter((i: number) => Number.isInteger(i) && i >= 0 && i < words.length);
+      if (!idx.length) throw Object.assign(new Error('No words to cut. Pass indices from the words list.'), { status: 400 });
+      const ranges = wordCutRanges(words, idx.map((i: number) => ({ i })));
+      return mutate(p.id, (draft) => cutRanges(draft, ranges), origin(req));
+    });
+  }),
+);
+app.post(
+  '/api/projects/:id/assets/:aid/enhance-voice',
+  wrap((req) => {
+    const p = loadProject(pid(req));
+    const a = asset(p, String(req.params.aid));
+    const strength = req.body?.strength === 'strong' ? 'strong' : 'light';
+    return startJob('smart', p.id, (update) => enhanceVoice(p.id, a, strength, update));
+  }),
+);
+app.post(
+  '/api/projects/:id/reframe',
+  wrap((req) => {
+    const p = loadProject(pid(req));
+    const w = Number(req.body?.width) || 1080;
+    const h = Number(req.body?.height) || 1920;
+    if (!(w >= 16 && h >= 16 && w <= 7680 && h <= 7680)) throw Object.assign(new Error('width and height must be 16-7680'), { status: 400 });
+    return startJob('smart', p.id, (update) => autoReframe(p.id, w, h, update));
+  }),
+);
+app.post(
+  '/api/projects/:id/find-shorts',
+  wrap((req) => {
+    const p = loadProject(pid(req));
+    const b = req.body || {};
+    const ready = textModel();
+    if (!ready.ok) throw Object.assign(new Error(ready.error), { status: 400 });
+    return startJob('smart', p.id, async (update) => {
+      const words = timelineWords(loadProject(p.id), await transcripts(p, lang(b.language), (f, m) => update(f * 0.5, m), { engine: b.engine }));
+      return { clips: await findShorts(words, { count: b.count, minSec: b.minSec, maxSec: b.maxSec }, (f, m) => update(0.5 + f * 0.5, m)) };
+    });
+  }),
+);
+app.post(
+  '/api/projects/:id/make-short',
+  wrap((req) => {
+    const p = loadProject(pid(req));
+    const b = req.body || {};
+    return startJob('smart', p.id, (update) => makeShort(p.id, { start: Number(b.start), end: Number(b.end), title: b.title ? String(b.title) : undefined, width: b.width, height: b.height, reframe: b.reframe }, update));
   }),
 );
 

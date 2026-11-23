@@ -211,8 +211,8 @@ const systemFor = (mode: PlanMode) => `${SYSTEM}\n\n${PLAN_RULES[mode]}`;
  * Tools that only look, so they never need a plan. Export is not one of them: it renders and writes a file
  * (and can replace an earlier export of the same name), so in 'always' mode it waits for a plan too.
  */
-const READ_ONLY = new Set(['get_project', 'get_transcript', 'get_captions', 'list_voices', 'list_presets', 'list_templates', 'get_job']);
-const readOnly = (name: string, args: any) => READ_ONLY.has(name) || (name === 'remove_silences' && args?.dryRun === true);
+const READ_ONLY = new Set(['get_project', 'get_transcript', 'get_captions', 'list_voices', 'list_presets', 'list_templates', 'get_job', 'get_words', 'find_shorts']);
+const readOnly = (name: string, args: any) => READ_ONLY.has(name) || ((name === 'remove_silences' || name === 'remove_fillers') && args?.dryRun === true);
 const PLAN_TOOL: ToolDef = {
   name: 'propose_plan',
   description: 'Show the user your plan and wait for their approval. Give short, concrete steps with times. After calling it, stop: the user approves, changes or cancels it, and an approval comes as their next message.',
@@ -232,6 +232,8 @@ const PLAN_TOOL: ToolDef = {
  */
 function bigEdit(name: string, args: any, projectId: string, start: Project): string | null {
   if (name === 'remove_silences') return 'take every silence out of the timeline';
+  if (name === 'remove_fillers') return 'cut every filler word out of the timeline';
+  if (name === 'auto_reframe') return 'change the frame to vertical and move the picture to follow the face';
   const op = (OPS as Record<string, (p: Project, a: any) => unknown>)[name];
   if (!op) return null;
   let after: Project;

@@ -167,6 +167,13 @@ For a studio over the internet, set `STUDIO_URL` to the https address and `STUDI
 | `set_keyframe` | Pin a clip's position, size, rotation and opacity at one moment; the clip glides between keyframes with the chosen ease |
 | `remove_keyframes` | Remove one keyframe, or all the motion of a clip |
 | `remove_silences` | Find and cut silent pauses (`dryRun` only lists them) |
+| `get_words` | The spoken words on the timeline with times, an index and fillers marked: the data for editing by text |
+| `cut_words` | Edit by deleting text: cut words by their index from `get_words`, with the pause after each; captions follow |
+| `remove_fillers` | Cut "um", "uh", "אה", "אממ" and stutters; `aggressive` also takes "basically", "you know", "כאילו", "בעצם"; `dryRun` lists them |
+| `enhance_voice` | Clean a file's voice (noise, hum, level, loudness); a cleaned copy replaces it on the timeline |
+| `auto_reframe` | Make the project vertical (or 4:5, 1:1) with keyframes that follow the speaker's face |
+| `find_shorts` | Find the moments of a long video that work as Reels / TikTok / Shorts, each with a title, hook and reason |
+| `make_short` | A new vertical project from one moment (video, captions, titles, sounds), the speaker followed |
 
 ### Captions
 
@@ -276,4 +283,4 @@ clip so it fades out over 2 seconds.
 curl -s -X POST http://127.0.0.1:5177/mcp -H "content-type: application/json" -H "accept: application/json, text/event-stream" -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-The answer lists the 51 tools.
+The answer lists the 58 tools.

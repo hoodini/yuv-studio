@@ -61,6 +61,8 @@ def read_wav(path):
 def main():
     use_pip_cuda()
     audio, language, out, model_name = sys.argv[1:5]
+    # An optional prompt written with fillers makes Whisper keep the "um"s it normally leaves out (verbatim mode).
+    prompt = sys.argv[5] if len(sys.argv) > 5 and sys.argv[5] else None
     from faster_whisper import WhisperModel
 
     audio = read_wav(audio)
@@ -82,6 +84,7 @@ def main():
             vad_parameters=dict(min_silence_duration_ms=400),
             beam_size=5,
             condition_on_previous_text=False,
+            initial_prompt=prompt,
         )
         words = []
         for seg in segments:

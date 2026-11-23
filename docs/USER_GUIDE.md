@@ -77,6 +77,18 @@ Keys are pasted once under the key button and stay on this computer. Every file 
 
 Clips snap to the playhead and to the edges of other clips while you drag them. Captions and titles drag and make room the same way.
 
+## Smart tools
+
+The **Smart** tab (the sparkles icon) has the tools that work on the words and the faces in your video. Pick the spoken language at the top.
+
+| Tool | What it does |
+|---|---|
+| **Edit by text** | **Load transcript** shows every spoken word. Click a word to jump there; Shift-click another to select the words between; press `Del` or **Cut** to take them out of the video, with the pause after them. Captions follow the cut. Fillers are underlined |
+| **Filler words** | **Remove filler words** cuts "um", "uh", "אה", "אממ" and a word said twice in a row ("I I", "אני אני"). **Extended mode** also takes "basically", "you know", "כאילו", "בעצם". The transcript for this is made word for word, so it keeps the fillers that normal captions leave out |
+| **Shorts from a long video** | Reads the transcript with the model from the AI agent tab and lists the moments that stand alone as a Reel, TikTok or Short: a title, the opening hook, why it works. **Make a vertical short** opens it as a new project (the original is not changed), 9:16 and following the speaker |
+| **Vertical, following the face** | Makes the project 9:16, 4:5 or 1:1 and adds keyframes that follow the speaker's face: still while they stay put, gliding when they move. Adjust any point on the timeline like other keyframes. Needs OpenCV for Python (`pip install opencv-python-headless`) |
+| **Clean voice** | Takes out background noise and hum, evens out the level and brings it to social media loudness. A cleaned copy of the file replaces it on the timeline; the original stays in the media list. **Strong** is for noisy rooms |
+
 ## Layers
 
 Tracks are layers. The top track is in front. A new project starts with two video layers and two audio layers, so you can put one clip above another right away.

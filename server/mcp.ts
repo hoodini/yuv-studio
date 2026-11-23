@@ -215,6 +215,49 @@ export function createMcp(base: string, token = '', source: 'agent' | 'mcp' = 'm
     { projectId: pid, thresholdDb: z.number().optional().describe('Default -34'), minSilence: z.number().optional().describe('Shortest pause to cut, seconds. Default 0.6'), padding: z.number().optional().describe('Silence kept around speech, seconds. Default 0.12'), dryRun: z.boolean().optional() },
     ({ projectId, ...rest }) => api('POST', `/api/projects/${projectId}/remove-silences`, rest),
   );
+  const lang = z.enum(['he', 'en', 'auto']).optional().describe('Spoken language; default auto');
+  tool(
+    'get_words',
+    'The spoken words on the timeline, one by one, with timeline times, an index, and fillers marked ("hesitation", "repeat", "soft"). Use it to edit by text: pick the indices of words to remove and pass them to cut_words. Transcribes first if needed.',
+    { projectId: pid, language: lang, aggressive: z.boolean().optional().describe('Also mark soft fillers such as "basically", "you know", "כאילו"') },
+    ({ projectId, ...rest }) => api('POST', `/api/projects/${projectId}/words`, rest).then((j) => waitJob(j.id)),
+  );
+  tool(
+    'cut_words',
+    'Edit the video by deleting text: cut the given words (indices from get_words) from every track, with the pause after each, and close the gaps. Captions follow.',
+    { projectId: pid, indices: z.array(z.number().int()), language: lang },
+    ({ projectId, ...rest }) => api('POST', `/api/projects/${projectId}/cut-words`, rest).then((j) => waitJob(j.id)),
+  );
+  tool(
+    'remove_fillers',
+    'Cut the filler words in Hebrew and English: hesitations (um, uh, אה, אממ) and stutters (a word said twice), and with aggressive also soft fillers (basically, you know, כאילו, בעצם). dryRun only lists them.',
+    { projectId: pid, language: lang, aggressive: z.boolean().optional(), dryRun: z.boolean().optional() },
+    ({ projectId, ...rest }) => api('POST', `/api/projects/${projectId}/remove-fillers`, rest).then((j) => waitJob(j.id)),
+  );
+  tool(
+    'enhance_voice',
+    'Clean the voice of a media file: reduce background noise and hum, even out the level, bring it to streaming loudness. Makes a cleaned copy and puts it in place of the original on the timeline (the original stays in the media list). strength: light (default) or strong for noisy rooms.',
+    { projectId: pid, assetId: z.string(), strength: z.enum(['light', 'strong']).optional() },
+    ({ projectId, assetId, ...rest }) => api('POST', `/api/projects/${projectId}/assets/${assetId}/enhance-voice`, rest).then((j) => waitJob(j.id)),
+  );
+  tool(
+    'auto_reframe',
+    'Make the project vertical (default 1080x1920) or another narrower size, and keep the speaker in the frame: the main video clips get keyframes that follow the face like a camera operator. Clips that already have keyframes are left alone.',
+    { projectId: pid, width: z.number().optional(), height: z.number().optional() },
+    ({ projectId, ...rest }) => api('POST', `/api/projects/${projectId}/reframe`, rest).then((j) => waitJob(j.id)),
+  );
+  tool(
+    'find_shorts',
+    'Find the moments of a long video that work on their own as Reels, TikToks or Shorts: each with start, end (timeline seconds), a title, the hook and why it works. Uses the text model set in the studio\'s AI agent tab. Then call make_short for the ones to keep.',
+    { projectId: pid, count: z.number().int().optional().describe('Default 5, max 10'), minSec: z.number().optional().describe('Default 20'), maxSec: z.number().optional().describe('Default 60'), language: lang },
+    ({ projectId, ...rest }) => api('POST', `/api/projects/${projectId}/find-shorts`, rest).then((j) => waitJob(j.id)),
+  );
+  tool(
+    'make_short',
+    'Make a new project from one moment of this project (everything between start and end: video, captions, titles, sounds), vertical 1080x1920 with the speaker followed by default. The original project is not changed. Returns the new projectId.',
+    { projectId: pid, start: z.number(), end: z.number(), title: z.string().optional(), width: z.number().optional(), height: z.number().optional(), reframe: z.boolean().optional().describe('Default true') },
+    ({ projectId, ...rest }) => api('POST', `/api/projects/${projectId}/make-short`, rest).then((j) => waitJob(j.id)),
+  );
   tool('add_track', 'Add a layer. Video tracks hold video and images, text tracks hold titles.', { projectId: pid, kind: z.enum(['video', 'audio', 'text', 'caption']), name: z.string().optional() }, ({ projectId, ...rest }) => op(projectId, 'add_track', rest));
   tool('remove_track', 'Delete a layer and its clips.', { projectId: pid, trackId: z.string() }, ({ projectId, ...rest }) => op(projectId, 'remove_track', rest));
   tool('update_track', 'Rename, mute or hide a track. patch: { name, muted, hidden }.', { projectId: pid, trackId: z.string(), patch: z.record(z.string(), z.any()) }, ({ projectId, ...rest }) => op(projectId, 'update_track', rest));

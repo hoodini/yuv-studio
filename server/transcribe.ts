@@ -79,7 +79,17 @@ export function pickEngine(requested?: string, quiet = false): Engine | null {
   return pick;
 }
 
-const transcriptFile = (asset: Asset, lang: Lang) => path.join(assetCache(asset.id), `transcript.${lang}.json`);
+const transcriptFile = (asset: Asset, lang: Lang, verbatim = false) => path.join(assetCache(asset.id), `transcript.${lang}${verbatim ? '.verbatim' : ''}.json`);
+
+/**
+ * Whisper leaves out "um" and "uh" unless its prompt shows them. Verbatim mode (used to find and cut filler words)
+ * gives it a prompt full of fillers, so it writes them down with their times.
+ */
+const VERBATIM_PROMPT: Record<Lang, string> = {
+  he: 'אממ... אה, אז, אה, אני, אני חושב ש... אממ, כאילו, בעצם... אה.',
+  en: 'Umm, uh, so, uh, I, I think... um, like, you know, uh.',
+  auto: 'Umm, uh, so, uh, I, I think... um. אממ... אה, אני, אני חושב ש... אה.',
+};
 
 export function cachedTranscript(asset: Asset, lang: Lang): Transcript | null {
   const f = transcriptFile(asset, lang);
@@ -88,15 +98,15 @@ export function cachedTranscript(asset: Asset, lang: Lang): Transcript | null {
 
 type Update = (p: number, m?: string) => void;
 
-async function transcribeLocal(asset: Asset, lang: Lang, update: Update): Promise<Transcript> {
+async function transcribeLocal(asset: Asset, lang: Lang, update: Update, verbatim = false): Promise<Transcript> {
   const dir = assetCache(asset.id);
   const wav = path.join(dir, 'audio16k.wav');
   update(0, `Extracting audio: ${asset.name}`);
   if (!fs.existsSync(wav)) await run(FFMPEG, ['-v', 'error', '-i', asset.path, '-vn', '-ac', '1', '-ar', '16000', '-y', wav]);
   update(0.03, `Transcribing: ${asset.name}`);
-  const out = path.join(dir, `local.${lang}.json`);
+  const out = path.join(dir, `local.${lang}${verbatim ? '.verbatim' : ''}.json`);
   let notes = '';
-  await run(findPython()!, [path.join(ROOT, 'server', 'transcribe.py'), wav, lang, out, MODELS[lang]], {
+  await run(findPython()!, [path.join(ROOT, 'server', 'transcribe.py'), wav, lang, out, MODELS[lang], verbatim ? VERBATIM_PROMPT[lang] : ''], {
     onStdout: (s) => {
       for (const line of s.split(/\r?\n/)) {
         const m = /^PROGRESS ([\d.]+)/.exec(line);
@@ -110,7 +120,7 @@ async function transcribeLocal(asset: Asset, lang: Lang, update: Update): Promis
 }
 
 /** Send one audio file to the provider and return its words (times relative to that file). */
-async function cloudRequest(file: string, lang: Lang): Promise<{ language: string; words: Word[] }> {
+async function cloudRequest(file: string, lang: Lang, verbatim = false): Promise<{ language: string; words: Word[] }> {
   const c = sttConfig();
   const form = new FormData();
   const blob = new Blob([fs.readFileSync(file)], { type: 'audio/mpeg' });
@@ -132,6 +142,7 @@ async function cloudRequest(file: string, lang: Lang): Promise<{ language: strin
     form.append('response_format', 'verbose_json');
     form.append('timestamp_granularities[]', 'word');
     if (lang !== 'auto') form.append('language', lang);
+    if (verbatim) form.append('prompt', VERBATIM_PROMPT[lang]);
   }
   const res = await fetch(url, { method: 'POST', headers, body: form }).catch((e) => {
     throw new Error(`Could not reach ${c.label} at ${c.baseUrl} (${e?.cause?.code || e.message}). Check the internet connection and the base URL.`);
@@ -148,7 +159,7 @@ async function cloudRequest(file: string, lang: Lang): Promise<{ language: strin
   return { language: data.language || data.language_code || lang, words };
 }
 
-async function transcribeCloud(asset: Asset, lang: Lang, update: Update): Promise<Transcript> {
+async function transcribeCloud(asset: Asset, lang: Lang, update: Update, verbatim = false): Promise<Transcript> {
   const c = sttConfig();
   const dir = path.join(assetCache(asset.id), 'cloud');
   fs.rmSync(dir, { recursive: true, force: true });
@@ -163,7 +174,7 @@ async function transcribeCloud(asset: Asset, lang: Lang, update: Update): Promis
   try {
     for (let i = 0; i < files.length; i++) {
       update(0.05 + (0.95 * i) / files.length, `Transcribing with ${c.label}: ${asset.name}`);
-      const r = await cloudRequest(path.join(dir, files[i]), lang);
+      const r = await cloudRequest(path.join(dir, files[i]), lang, verbatim);
       language = r.language;
       for (const w of r.words) words.push({ text: w.text, t0: Math.round((w.t0 + i * part) * 1000) / 1000, t1: Math.round((w.t1 + i * part) * 1000) / 1000 });
     }
@@ -173,14 +184,16 @@ async function transcribeCloud(asset: Asset, lang: Lang, update: Update): Promis
   return { language, model: `${c.provider}:${c.model}`, device: 'cloud', engine: 'cloud', words };
 }
 
-export async function transcribe(asset: Asset, lang: Lang, update: Update, opts: { force?: boolean; engine?: string } = {}): Promise<Transcript> {
+export async function transcribe(asset: Asset, lang: Lang, update: Update, opts: { force?: boolean; engine?: string; verbatim?: boolean } = {}): Promise<Transcript> {
   if (!asset.hasAudio) return { language: lang, model: '', device: '', words: [] };
   await checkPython();
   const engine = pickEngine(opts.engine)!;
-  const hit = opts.force ? null : cachedTranscript(asset, lang);
+  const v = !!opts.verbatim;
+  const f = transcriptFile(asset, lang, v);
+  const hit = opts.force || !fs.existsSync(f) ? null : (JSON.parse(fs.readFileSync(f, 'utf8')) as Transcript);
   // A cached transcript is reused unless the caller asked for the other engine explicitly.
   if (hit && (!opts.engine || opts.engine === 'auto' || (hit.engine || 'local') === engine)) return hit;
-  const result = engine === 'local' ? await transcribeLocal(asset, lang, update) : await transcribeCloud(asset, lang, update);
-  fs.writeFileSync(transcriptFile(asset, lang), JSON.stringify(result));
+  const result = engine === 'local' ? await transcribeLocal(asset, lang, update, v) : await transcribeCloud(asset, lang, update, v);
+  fs.writeFileSync(f, JSON.stringify(result));
   return result;
 }

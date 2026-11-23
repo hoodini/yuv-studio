@@ -194,7 +194,7 @@ export interface Project {
 
 export interface Job {
   id: string;
-  kind: 'export' | 'transcribe' | 'captions' | 'proxy' | 'import';
+  kind: 'export' | 'transcribe' | 'captions' | 'proxy' | 'import' | 'smart';
   projectId: string;
   status: 'queued' | 'running' | 'done' | 'error';
   progress: number;

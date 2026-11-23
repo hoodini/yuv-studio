@@ -34,7 +34,7 @@ flowchart LR
   subgraph SRV["Express server, 127.0.0.1 port 5177"]
     GATE["Request gate<br/>host, origin, token"]
     API["REST API<br/>/api"]
-    MCP["MCP endpoint<br/>POST /mcp, 51 tools"]
+    MCP["MCP endpoint<br/>POST /mcp, 58 tools"]
     OPS["Edit operations<br/>shared/ops.ts"]
     BUS["Event bus and jobs"]
   end
@@ -111,7 +111,7 @@ sequenceDiagram
   S-->>UI: SSE project event, editor reloads
 ```
 
-`OPS` holds 32 named operations. Of the 51 MCP tools, 30 post a single op; the rest call dedicated endpoints because they need files or outside services (import, stock search, transcription, captions, translation, silences, sound effects, voice, export, jobs). Some edits in the editor also run on the server for the same reason: the UI first flushes pending saves, calls the endpoint, then reloads.
+`OPS` holds 32 named operations. Of the 58 MCP tools, 30 post a single op; the rest call dedicated endpoints because they need files or outside services (import, stock search, transcription, captions, translation, silences, sound effects, voice, export, jobs). Some edits in the editor also run on the server for the same reason: the UI first flushes pending saves, calls the endpoint, then reloads.
 
 | Part | Where it lives |
 |---|---|

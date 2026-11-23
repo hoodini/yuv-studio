@@ -10,7 +10,7 @@ Edit in the browser on your own machine. Or tell Claude, Codex or Cursor what yo
 
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-17BCCF?style=flat-square)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/hoodini/yuv-studio?style=flat-square&color=7A6BFF)](https://github.com/hoodini/yuv-studio/stargazers)
-[![MCP tools](https://img.shields.io/badge/MCP_tools-51-5DE1EE?style=flat-square)](docs/MCP.md)
+[![MCP tools](https://img.shields.io/badge/MCP_tools-58-5DE1EE?style=flat-square)](docs/MCP.md)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522-4645AA?style=flat-square)](https://nodejs.org)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-17BCCF?style=flat-square)](CONTRIBUTING.md)
 
@@ -34,7 +34,7 @@ Edit in the browser on your own machine. Or tell Claude, Codex or Cursor what yo
 
 Video editors were built for hands on a mouse. AI agents can write code, but they can't open Premiere.
 
-YUV.AI Studio makes **every edit an API call**. The same operations sit behind the editor, a REST API and 51 MCP tools, so an agent can do anything a person can do in the interface, and you see it happen on the timeline. When it's wrong, you undo it like any other edit.
+YUV.AI Studio makes **every edit an API call**. The same operations sit behind the editor, a REST API and 58 MCP tools, so an agent can do anything a person can do in the interface, and you see it happen on the timeline. When it's wrong, you undo it like any other edit.
 
 - **Yours.** It runs on `127.0.0.1`. Your footage never leaves your computer unless you choose a cloud service.
 - **Agent-native.** Not a chat bolted onto an editor: the editor *is* the API.
@@ -86,8 +86,13 @@ No agent? The editor has its own AI chat: bring a key for Claude, OpenAI, Grok, 
 | | |
 |---|---|
 | ✂️ **Cut** | Trim, split, delete with the gap closed, mark a range with `I` / `O` and cut it from every track, remove silences automatically. |
+| 📝 **Edit by text** | The transcript as words: select words, press Delete, and they are cut from the video. Captions follow. |
+| 🧹 **Filler words** | Cut "um", "uh", "אה", "אממ" and stutters in one click, in Hebrew and English (a word-for-word transcription keeps the fillers Whisper usually hides). |
+| 🎞️ **Shorts finder** | The AI reads a long video and picks the moments that stand alone as Reels, TikToks or Shorts, each with a title, hook and reason; one click makes a vertical project from it. |
+| 📱 **Vertical, following the face** | Reframe 16:9 to 9:16, 4:5 or 1:1 with keyframes that follow the speaker like a camera operator, editable on the timeline. |
+| 🎙️ **Clean voice** | Noise and hum reduction, levelling and loudness in one step. |
 | 🤖 **AI agent** | A chat inside the editor that edits while you watch. A glow around the frame and a guided cursor show each step. Plans to approve, changes to review. |
-| 🔌 **MCP + REST** | 51 MCP tools and a REST API over the same operations. Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI. |
+| 🔌 **MCP + REST** | 58 MCP tools and a REST API over the same operations. Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI. |
 | 💬 **Captions** | Hebrew and English, transcribed locally (faster-whisper) or in the cloud. Word-by-word highlight, 9 styles, an editor to fix mistakes. Captions follow your cuts. |
 | 🌍 **Translated captions** | Into Hebrew, English, Spanish, French, German, Italian, Portuguese or Russian, or two languages at once, timing kept. |
 | 🎙️ **Voice** | Narration from text in Hebrew or English. A voice library, or clone your own from a clip you choose. |
@@ -132,7 +137,7 @@ flowchart LR
   end
 
   you -- "UI" --> gate
-  agent -- "/mcp · 51 tools" --> gate
+  agent -- "/mcp · 58 tools" --> gate
   script -- "/api" --> gate
 
   ops -- "live events" --> you
@@ -166,7 +171,7 @@ Projects, uploads, exports and settings live in `data/`, which is not committed.
 | [Transcription](docs/TRANSCRIPTION.md) | Local Whisper, cloud providers, fixing captions |
 | [Voice and AI clips](docs/VOICE.md) | Narration and voice cloning, importing generated clips by link |
 | [AI agent](docs/AGENT.md) | The chat in the editor, providers and keys, plans, reviewing its changes |
-| [MCP server](docs/MCP.md) | Connect an AI client; the 51 tools; example prompts |
+| [MCP server](docs/MCP.md) | Connect an AI client; the 58 tools; example prompts |
 | [REST API](docs/API.md) | Endpoints and edit operations |
 | [Use it from anywhere](docs/REMOTE.md) | A private address on your own domain through a Cloudflare Tunnel |
 | [Architecture](docs/ARCHITECTURE.md) | Diagrams of the logic and the infrastructure |

@@ -1,4 +1,4 @@
-import { AudioLines, Bot, Captions, Clapperboard, Film, FolderOpen, Image as ImageIcon, Layers, Mic, Music, Play, Plus, Trash2, Type, Upload } from 'lucide-react';
+import { AudioLines, Bot, Captions, Clapperboard, Film, FolderOpen, Image as ImageIcon, Layers, Mic, Music, Play, Plus, Sparkles, Trash2, Type, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { SFX, SFX_GROUPS, TITLE_PRESETS } from '../../shared/presets';
 import { drawTextItem } from '../../shared/renderText';
@@ -12,6 +12,7 @@ import { useStore } from '../store';
 import { AgentTab } from './AgentTab';
 import { CaptionsTab } from './CaptionsTab';
 import { FontsBox } from './FontsBox';
+import { SmartTab } from './SmartTab';
 import { StockTab } from './StockTab';
 import { VoiceTab } from './VoiceTab';
 
@@ -171,6 +172,7 @@ const TABS = [
   { id: 'stock', icon: Clapperboard, C: StockTab },
   { id: 'text', icon: Type, C: TextTab },
   { id: 'captions', icon: Captions, C: CaptionsTab },
+  { id: 'smart', icon: Sparkles, C: SmartTab },
   { id: 'voice', icon: Mic, C: VoiceTab },
   { id: 'sounds', icon: Music, C: SoundsTab },
 ];
