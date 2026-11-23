@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
 import { watermarkRect, BLUR_PX, SPIN_DEG, ZOOMING, mediaRect } from '../shared/geometry';
+import { brandCardRanges } from '../shared/brand';
 import { EXPORT_PRESETS } from '../shared/presets';
 import { overlaySegments, textBands } from '../shared/renderText';
 import type { Clip, Ease, Keyframe, Project, Transition } from '../shared/types';
@@ -366,7 +367,10 @@ export async function exportProject(src: Project, opts: ExportOpts, baseUrl: str
   if (wm && wmAsset) {
     const r = watermarkRect(finalW, finalH, wmAsset, wm);
     const idx = addInput('-loop', '1', '-framerate', String(fps), '-t', n(D), '-i', wmAsset.path);
-    filters.push(`[${idx}:v]scale=${r.w}:${r.h}:flags=lanczos,format=rgba,colorchannelmixer=aa=${n(wm.opacity)}[wm]`, `[vsized][wm]overlay=${r.x}:${r.y}:format=auto:eof_action=repeat,format=yuv420p[vout]`);
+    // not over the brand's intro and outro cards, which show the logo big
+    const cards = brandCardRanges(p);
+    const enable = cards.length ? `:enable='not(${cards.map(([s, e]) => `between(t,${n(s)},${n(e - 1 / fps)})`).join('+')})'` : '';
+    filters.push(`[${idx}:v]scale=${r.w}:${r.h}:flags=lanczos,format=rgba,colorchannelmixer=aa=${n(wm.opacity)}[wm]`, `[vsized][wm]overlay=${r.x}:${r.y}:format=auto:eof_action=repeat${enable},format=yuv420p[vout]`);
   }
   filters.push(`${audio.join('')}amix=inputs=${audio.length}:normalize=0:duration=first:dropout_transition=0,alimiter=limit=0.97[aout]`);
 

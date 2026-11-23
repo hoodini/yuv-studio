@@ -29,6 +29,8 @@ The editing runs on the computer that hosts the studio, so it has to be on. **Fu
 
 **New project** (in the menu next to the project name) asks for three things:
 
+- A **ready-made template**, if one fits: **YouTube video** (captions and a name card), **Reel · Short · TikTok** (a hook on top, captions clear of the app's buttons), **Podcast clip** (two speakers one above the other, captions between them), **Tutorial** (a screen recording with your face in the corner) or **Feed post** (4:5, a key line on top). It sets the canvas, the layout, where the captions go and placeholder titles to retype.
+- The **brand** (when you have brand kits): your default kit is picked; **No brand** leaves it out.
 - **Canvas size:** 16:9 (YouTube), 9:16 (TikTok, Reels, Shorts), 4:5 (Instagram post), 1:1, or 4K. The size you pick stays, whatever video you drop in first.
 - **Layout**, for several videos in one frame: **One video**, **One above the other**, **Side by side**, or **Picture in picture**. In a layout, a video you put on the top or the lower video layer fits into its place by itself (the whole picture, centred). Change the layout later in the inspector when nothing is selected.
 - Or one of **your templates**.
@@ -156,6 +158,16 @@ Select a video or image clip: **Blend with the layers below** sets how it mixes 
 ## Logo watermark
 
 In the inspector with nothing selected, **Logo watermark**: upload a logo (a PNG with a transparent background looks best) or pick an image already in the project, then choose the corner, the size, the opacity and the margin. It is drawn above everything in the preview and in every export; when an export changes the shape (a 16:9 project exported for TikTok), the logo keeps its corner and size in the new frame.
+
+## Brand kits
+
+The **Brand** tab keeps the look of your brand, or of each client: the logo, four colours (**Primary** for buttons and pills, **Accent** for the highlighted word and markers, **Light text** over video, **Dark** for text on light pills and dark boxes), a heading and a body font, the caption look, and the line on the outro card. The preview at the top shows a title and a caption in it. The star makes a kit the default for new projects.
+
+- **Put on this project** recolours every caption track and title in the brand's colours and fonts. What you set by hand (size, place, animation) stays. The logo goes in the kit's corner. From then on, new titles and captions come out in the brand's look, and the Text and Captions tabs show their looks that way. **Refresh on this project** brings in later changes to the kit.
+- **+ Intro** adds a card at the start: the brand's background, the logo, and the brand name. Everything else moves later by its length. **+ Outro** adds a card at the end with the outro line. Both are ordinary clips on the **Brand** layers: move, shorten, retype or delete them. The corner logo steps aside while a card shows.
+- **Stop following** leaves what is already styled and lets new titles use the studio's own looks again.
+
+A heading font with no Hebrew letters (Anton, for example) shows Hebrew in a fallback face: pick a Hebrew font (Karantina, Assistant) for Hebrew videos.
 
 ## Fonts
 

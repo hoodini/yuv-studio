@@ -1,4 +1,15 @@
-import type { Asset, Job, Project } from '../shared/types';
+import type { Asset, BrandStyle, Job, Project } from '../shared/types';
+
+/** A brand kit as the server keeps it (server/brands.ts). */
+export interface BrandKit extends BrandStyle {
+  id: string;
+  logo?: string;
+  logoUrl?: string | null;
+  logoCorner?: 'tl' | 'tr' | 'bl' | 'br';
+  logoSize?: number;
+  logoOpacity?: number;
+  isDefault?: boolean;
+}
 
 export const clientId = 'ui_' + Math.random().toString(36).slice(2, 10);
 
@@ -15,10 +26,24 @@ async function req<T>(method: string, url: string, body?: any): Promise<T> {
 
 export const api = {
   projects: () => req<{ id: string; name: string; updatedAt: string; clips: number }[]>('GET', '/api/projects'),
-  create: (name: string, opts: { width?: number; height?: number; layout?: string; templateId?: string } = {}) => req<Project>('POST', '/api/projects', { name, ...opts }),
+  create: (name: string, opts: { width?: number; height?: number; layout?: string; templateId?: string; starterId?: string; brandId?: string; lang?: string } = {}) => req<Project>('POST', '/api/projects', { name, ...opts }),
   templates: () => req<any[]>('GET', '/api/templates'),
   saveTemplate: (projectId: string, name: string) => req<any>('POST', '/api/templates', { projectId, name }),
   removeTemplate: (id: string) => req<any>('DELETE', `/api/templates/${id}`),
+  starters: () => req<any[]>('GET', '/api/starters'),
+  brands: () => req<BrandKit[]>('GET', '/api/brands'),
+  createBrand: (body: Partial<BrandKit>) => req<BrandKit>('POST', '/api/brands', body),
+  updateBrand: (id: string, body: Partial<BrandKit>) => req<BrandKit>('PUT', `/api/brands/${id}`, body),
+  removeBrand: (id: string) => req('DELETE', `/api/brands/${id}`),
+  brandLogo: async (id: string, file: File) => {
+    const res = await fetch(`/api/brands/${id}/logo`, { method: 'PUT', headers: { 'content-type': file.type || 'application/octet-stream', 'x-client-id': clientId }, body: file });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `${res.status}`);
+    return data as BrandKit;
+  },
+  removeBrandLogo: (id: string) => req<BrandKit>('DELETE', `/api/brands/${id}/logo`),
+  applyBrand: (projectId: string, body: { brandId?: string; remove?: boolean; logo?: boolean }) => req<any>('POST', `/api/projects/${projectId}/brand`, body),
+  brandCard: (projectId: string, kind: 'intro' | 'outro') => req<any>('POST', `/api/projects/${projectId}/bumper`, { kind }),
   load: (id: string) => req<Project>('GET', `/api/projects/${id}`),
   snapshot: (id: string, snap: string) => req<Project>('GET', `/api/projects/${id}/snapshots/${snap}`),
   save: (p: Project) => req<{ rev: number }>('PUT', `/api/projects/${p.id}`, p),

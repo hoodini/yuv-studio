@@ -1,5 +1,6 @@
-import { AudioLines, Bot, Captions, Clapperboard, Film, FolderOpen, Image as ImageIcon, Layers, Mic, Music, Play, Plus, Sparkles, Trash2, Type, Upload } from 'lucide-react';
+import { AudioLines, Bot, Captions, Clapperboard, Film, FolderOpen, Image as ImageIcon, Layers, Mic, Music, Palette, Play, Plus, Sparkles, Trash2, Type, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { brandTitleStyle } from '../../shared/brand';
 import { SFX, SFX_GROUPS, TITLE_PRESETS } from '../../shared/presets';
 import { drawTextItem } from '../../shared/renderText';
 import type { Clip, TextStyle } from '../../shared/types';
@@ -10,6 +11,7 @@ import { useT } from '../i18n';
 import { playback } from '../playback';
 import { useStore } from '../store';
 import { AgentTab } from './AgentTab';
+import { BrandTab } from './BrandTab';
 import { CaptionsTab } from './CaptionsTab';
 import { FontsBox } from './FontsBox';
 import { SmartTab } from './SmartTab';
@@ -19,6 +21,9 @@ import { VoiceTab } from './VoiceTab';
 /** A small live rendering of a text style, drawn with the real renderer. */
 export function StylePreview({ style, text, words }: { style: TextStyle; text: string; words?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  // Keyed on the style's content: a parent that builds the style on each render (brand looks) must not redraw, or
+  // loading the fonts (which re-renders font pickers) would start the next redraw, forever.
+  const key = JSON.stringify(style);
   useEffect(() => {
     let live = true;
     void loadFonts().then(() => {
@@ -38,7 +43,7 @@ export function StylePreview({ style, text, words }: { style: TextStyle; text: s
       draw(Math.min(2.4, (W * 0.84) / box.w, (H * 0.6) / box.h));
     });
     return () => void (live = false);
-  }, [style, text, words]);
+  }, [key, text, words]);
   return <canvas ref={ref} className="style-preview" />;
 }
 
@@ -122,13 +127,14 @@ function MediaTab() {
 
 function TextTab() {
   const { t, isHe } = useT();
+  const brand = useStore((s) => s.project?.brand);
   return (
     <div className="tab-body">
-      <p className="hint">{t('titlesHint')}</p>
+      <p className="hint">{brand ? (isHe ? `הכותרות במראה של "${brand.name}"` : `Titles in the look of "${brand.name}"`) : t('titlesHint')}</p>
       <div className="preset-grid">
         {TITLE_PRESETS.map((p) => (
           <button key={p.id} className="preset" onClick={() => actions.addText(p.id, isHe ? p.sampleHe : p.sample)}>
-            <StylePreview style={p.style} text={isHe ? p.sampleHe : p.sample} />
+            <StylePreview style={brand ? brandTitleStyle(brand, p.id) : p.style} text={isHe ? p.sampleHe : p.sample} />
             <span>{isHe ? p.labelHe : p.label}</span>
           </button>
         ))}
@@ -173,6 +179,7 @@ const TABS = [
   { id: 'text', icon: Type, C: TextTab },
   { id: 'captions', icon: Captions, C: CaptionsTab },
   { id: 'smart', icon: Sparkles, C: SmartTab },
+  { id: 'brand', icon: Palette, C: BrandTab },
   { id: 'voice', icon: Mic, C: VoiceTab },
   { id: 'sounds', icon: Music, C: SoundsTab },
 ];

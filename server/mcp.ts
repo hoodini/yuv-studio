@@ -4,6 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { readFileSync } from 'node:fs';
 import { CAPTION_LANGS, CAPTION_PRESETS, EXPORT_PRESETS, FX_PRESETS, LAYOUTS, SFX, TITLE_PRESETS, TRANSITIONS } from '../shared/presets';
+import { STARTERS } from '../shared/starters';
 
 const CAPTION_LANG_IDS = Object.keys(CAPTION_LANGS) as [string, ...string[]];
 const VERSION: string = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
@@ -55,11 +56,51 @@ export function createMcp(base: string, token = '', source: 'agent' | 'mcp' = 'm
   tool('list_projects', 'List the projects in the studio.', {}, () => api('GET', '/api/projects'));
   tool(
     'create_project',
-    `Create a project. The first video added sets the frame size and frame rate unless you set them here (1920x1080 for 16:9, 1080x1920 for 9:16, 1080x1350 for 4:5, 1080x1080 square). layout arranges the video layers from the start: ${LAYOUTS.map((l) => `${l.id} (${l.label.toLowerCase()})`).join(', ')}. templateId starts from a saved template (list_templates).`,
-    { name: z.string(), width: z.number().optional(), height: z.number().optional(), fps: z.number().optional(), layout: z.enum(LAYOUTS.map((l) => l.id) as [string, ...string[]]).optional(), templateId: z.string().optional() },
-    (a) => api('POST', '/api/projects', a).then((p) => ({ projectId: p.id, name: p.name, width: p.width, height: p.height, layout: p.layout, editorUrl: `${base}/?project=${p.id}` })),
+    `Create a project. The first video added sets the frame size and frame rate unless you set them here (1920x1080 for 16:9, 1080x1920 for 9:16, 1080x1350 for 4:5, 1080x1080 square). layout arranges the video layers from the start: ${LAYOUTS.map((l) => `${l.id} (${l.label.toLowerCase()})`).join(', ')}. starterId starts from a ready-made starter (${STARTERS.map((s) => `${s.id}: ${s.label.toLowerCase()}`).join(', ')}): canvas, caption look and placeholder titles in place. templateId starts from a saved template (list_templates). brandId puts a brand kit on it (list_brands; "default" for the default kit).`,
+    {
+      name: z.string(),
+      width: z.number().optional(),
+      height: z.number().optional(),
+      fps: z.number().optional(),
+      layout: z.enum(LAYOUTS.map((l) => l.id) as [string, ...string[]]).optional(),
+      starterId: z.enum(STARTERS.map((s) => s.id) as [string, ...string[]]).optional(),
+      templateId: z.string().optional(),
+      brandId: z.string().optional(),
+      lang: z.enum(['he', 'en']).optional().describe('Language of the placeholder titles of a starter'),
+    },
+    (a) => api('POST', '/api/projects', a).then((p) => ({ projectId: p.id, name: p.name, width: p.width, height: p.height, layout: p.layout, brand: p.brand?.name, editorUrl: `${base}/?project=${p.id}` })),
   );
-  tool('list_templates', 'List saved project templates (canvas size, layers, layout, titles, logo) with their ids, for create_project.', {}, () => api('GET', '/api/templates'));
+  tool('list_templates', 'List the ready-made starters and the saved project templates (canvas size, layers, layout, titles, logo) with their ids, for create_project (starterId or templateId).', {}, async () => ({ starters: await api('GET', '/api/starters'), templates: await api('GET', '/api/templates') }));
+  tool('list_brands', 'List the brand kits: name, colours, fonts, caption look, call to action, whether it has a logo, and which one is the default.', {}, () => api('GET', '/api/brands').then((list: any[]) => list.map(({ logoUrl, logo, ...k }) => ({ ...k, hasLogo: !!logo }))));
+  tool(
+    'save_brand',
+    'Create a brand kit, or change one (with brandId). Colours are hex: primary (buttons, pills), accent (the highlighted word, markers), light (text over video), dark (text on light pills, dark boxes). Fonts are family names from the studio (bundled, uploaded or imported from Google Fonts). captionPreset is the caption look new captions start from. cta is the line of the outro card. To set the logo, import the image into a project first and pass logoFrom.',
+    {
+      brandId: z.string().optional(),
+      name: z.string().optional(),
+      colors: z.object({ primary: z.string().optional(), accent: z.string().optional(), light: z.string().optional(), dark: z.string().optional() }).optional(),
+      fonts: z.object({ heading: z.string().optional(), body: z.string().optional() }).optional(),
+      captionPreset: z.enum(CAPTION_PRESETS.map((c) => c.id) as [string, ...string[]]).optional(),
+      cta: z.string().optional(),
+      logoFrom: z.object({ projectId: z.string(), assetId: z.string() }).optional().describe('An image asset in a project to use as the logo'),
+      logoCorner: z.enum(['tl', 'tr', 'bl', 'br']).optional(),
+      logoSize: z.number().optional().describe('Logo width as a fraction of the shorter side, 0.03-0.6'),
+      isDefault: z.boolean().optional(),
+    },
+    ({ brandId, ...rest }) => (brandId ? api('PUT', `/api/brands/${brandId}`, rest) : api('POST', '/api/brands', rest)).then(({ logoUrl, logo, ...k }: any) => ({ ...k, hasLogo: !!logo })),
+  );
+  tool(
+    'apply_brand',
+    'Put a brand kit on a project: every caption track and title takes its colours and fonts (sizes, places and animations stay), its logo goes in the corner, and new titles and captions follow it. remove: stop following the brand (what is there stays).',
+    { projectId: pid, brandId: z.string().optional().describe('Default: the default kit'), logo: z.boolean().optional().describe('false: leave the logo out'), remove: z.boolean().optional() },
+    ({ projectId, ...rest }) => api('POST', `/api/projects/${projectId}/brand`, rest),
+  );
+  tool(
+    'add_brand_card',
+    "Add the brand's intro card at the start (the whole edit moves later by its length) or its outro card at the end: a background in the brand colours, the logo, and the brand name (intro) or its call to action (outro). Uses the project's brand (apply_brand first), or a neutral look.",
+    { projectId: pid, kind: z.enum(['intro', 'outro']), duration: z.number().optional().describe('Seconds; intro 2.5, outro 3.5 by default'), text: z.string().optional().describe('Instead of the name / call to action; empty for none') },
+    ({ projectId, ...rest }) => api('POST', `/api/projects/${projectId}/bumper`, rest),
+  );
   tool('save_template', 'Save a project as a template: its canvas, layers, layout, titles and logo, without its video, audio or captions. New projects can start from it.', { projectId: pid, name: z.string() }, (a) => api('POST', '/api/templates', a));
   tool('get_project', 'Read the timeline: assets, tracks (top layer first) and every clip with its start and end time.', { projectId: pid }, (a) => api('GET', `/api/projects/${a.projectId}/summary`));
   tool('set_project', 'Change the project name, frame size or frame rate (e.g. 1080x1920 for vertical, fps 60).', { projectId: pid, name: z.string().optional(), width: z.number().optional(), height: z.number().optional(), fps: z.number().optional() }, ({ projectId, ...rest }) => op(projectId, 'set_project', rest));

@@ -150,7 +150,8 @@ export async function completeText(system: string, user: string, signal?: AbortS
  * and it cannot read files from disk or fetch URLs, so text it reads (captions, names) that tries to steer it
  * has no way to pull in files or send data out. The user imports media themself; the agent uses what is in the project.
  */
-const HIDDEN = new Set(['list_projects', 'create_project', 'list_templates', 'save_template', 'clone_voice', 'import_media', 'import_media_url', 'search_stock', 'add_stock']);
+// save_brand changes the brand kits of every project (and can read an image from another project), so it stays with the user.
+const HIDDEN = new Set(['list_projects', 'create_project', 'list_templates', 'save_template', 'save_brand', 'clone_voice', 'import_media', 'import_media_url', 'search_stock', 'add_stock']);
 interface ToolDef {
   name: string;
   description: string;
@@ -211,7 +212,7 @@ const systemFor = (mode: PlanMode) => `${SYSTEM}\n\n${PLAN_RULES[mode]}`;
  * Tools that only look, so they never need a plan. Export is not one of them: it renders and writes a file
  * (and can replace an earlier export of the same name), so in 'always' mode it waits for a plan too.
  */
-const READ_ONLY = new Set(['get_project', 'get_transcript', 'get_captions', 'list_voices', 'list_presets', 'list_templates', 'get_job', 'get_words', 'find_shorts']);
+const READ_ONLY = new Set(['get_project', 'get_transcript', 'get_captions', 'list_voices', 'list_presets', 'list_templates', 'list_brands', 'get_job', 'get_words', 'find_shorts']);
 const readOnly = (name: string, args: any) => READ_ONLY.has(name) || ((name === 'remove_silences' || name === 'remove_fillers') && args?.dryRun === true);
 const PLAN_TOOL: ToolDef = {
   name: 'propose_plan',

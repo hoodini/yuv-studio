@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+**Brand kits and ready-made templates** (a new **Brand** tab, and 4 new MCP tools: 63 in all)
+
+- **Brand kits:** your logo, four colours (primary, accent, light text, dark), a heading and a body font, a caption look and an outro line, kept in the studio. Several kits (one per client), one of them the default. A brand font that is not installed yet is fetched from Google Fonts.
+- **Put a brand on a project in one click:** every caption track and title takes the brand's colours and fonts, while sizes, places and animations people set stay; the logo goes in its corner. From then on, new titles and captions come out in the brand's look, and the Text and Captions tabs preview them that way. MCP: `list_brands`, `save_brand`, `apply_brand`.
+- **Intro and outro cards:** a background in the brand's colours, the logo, and the brand name (intro) or its call to action (outro). The intro moves the whole edit later; the corner logo steps aside while a card shows. MCP: `add_brand_card`.
+- **Ready-made templates** in the new-project dialog: YouTube video, Reel · Short · TikTok, Podcast clip (two speakers), Tutorial (screen + face) and Feed post (4:5). Each sets the canvas, the layout, where the captions go and placeholder titles, in the chosen brand. `create_project` takes `starterId` and `brandId`; `list_templates` lists the starters too. Saved templates keep their brand.
+- Fixed: text style previews could stay blank when many mounted at once (the font stylesheet's load event was missed); fonts now load once and are shared.
+
 **Smart tools** (a new **Smart** tab, and 8 new MCP tools: 59 in all)
 
 - **Edit by text:** the transcript as words. Click a word to jump to it, select words and delete them, and they are cut from the video with the pause after them. Captions follow. MCP: `get_words`, `cut_words`.

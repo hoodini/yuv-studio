@@ -124,9 +124,13 @@ For a studio over the internet, set `STUDIO_URL` to the https address and `STUDI
 | Tool | What it does |
 |---|---|
 | `list_projects` | List the projects |
-| `create_project` | Create a project, optionally with a frame size, a `layout` (`single`, `stack`, `side`, `pip`) or a `templateId`; returns its id and the editor link |
-| `list_templates` | Saved templates (canvas, layers, layout, titles, logo) |
+| `create_project` | Create a project, optionally with a frame size, a `layout` (`single`, `stack`, `side`, `pip`), a ready-made `starterId` (`youtube`, `reel`, `podcast`, `tutorial`, `feed`) or a saved `templateId`, and a `brandId` (or `"default"`); returns its id and the editor link |
+| `list_templates` | The ready-made starters and the saved templates (canvas, layers, layout, titles, logo) |
 | `save_template` | Save a project as a template, without its video, audio or captions |
+| `list_brands` | The brand kits: colours, fonts, caption look, call to action, logo or not, the default |
+| `save_brand` | Create or change a brand kit; the logo comes from an image in a project (`logoFrom`) |
+| `apply_brand` | Put a brand kit on a project: captions and titles take its colours and fonts, the logo goes in its corner, new ones follow it |
+| `add_brand_card` | The brand's intro card at the start (the edit moves later) or outro card at the end |
 | `get_project` | The timeline: assets, tracks and every clip with start and end |
 | `set_project` | Name, frame size, frame rate |
 
@@ -232,6 +236,12 @@ The export draws the same curves as the preview, at the picture's largest size, 
 ## Example prompts
 
 ```
+Make a brand kit "Acme" with primary #7A6BFF, accent #17BCCF, Inter for text and
+Anton for headings. Then start a reel from the "reel" starter in that brand, import
+C:/Videos/talk.mp4, caption it, and add the intro and outro cards.
+```
+
+```
 In "Talk": every time I say the name of a product, zoom in on my face by 1.4 for
 two seconds with a smooth ease, then come back.
 ```
@@ -284,4 +294,4 @@ clip so it fades out over 2 seconds.
 curl -s -X POST http://127.0.0.1:5177/mcp -H "content-type: application/json" -H "accept: application/json, text/event-stream" -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-The answer lists the 59 tools.
+The answer lists the 63 tools.

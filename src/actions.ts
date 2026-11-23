@@ -173,7 +173,8 @@ export const actions = {
     const { edit, select } = S();
     let id = '';
     const font = getDefaultFont();
-    edit((p) => void (id = addTextClip(p, { preset, text, start: playback.time, ...(font ? { style: { fontFamily: font } } : {}) }).id));
+    // the default font is for projects without a brand; a brand's own fonts win
+    edit((p) => void (id = addTextClip(p, { preset, text, start: playback.time, ...(font && !p.brand ? { style: { fontFamily: font } } : {}) }).id));
     if (id) select([id]);
   },
   /** Edits that run on the server (they need the files): save first, keep an undo step, then reload. */

@@ -1,7 +1,9 @@
 import { Check, LayoutTemplate, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { LAYOUTS, RESOLUTIONS } from '../../shared/presets';
+import { STARTERS } from '../../shared/starters';
 import { api } from '../api';
+import type { BrandKit } from '../api';
 import { useT } from '../i18n';
 import { flushSave, useStore } from '../store';
 
@@ -51,22 +53,35 @@ export function NewProjectDialog({ onClose }: { onClose: () => void }) {
   const [layout, setLayout] = useState('single');
   const [templates, setTemplates] = useState<TemplateRow[]>([]);
   const [template, setTemplate] = useState('');
+  const [starter, setStarter] = useState('');
+  const [brands, setBrands] = useState<BrandKit[]>([]);
+  const [brand, setBrand] = useState('none');
   const [busy, setBusy] = useState(false);
-  useEffect(
-    () =>
-      void api
-        .templates()
-        .then(setTemplates)
-        .catch(() => {}),
-    [],
-  );
+  useEffect(() => {
+    void api
+      .templates()
+      .then(setTemplates)
+      .catch(() => {});
+    void api
+      .brands()
+      .then((list) => {
+        setBrands(list);
+        // the default brand kit is picked for you; "No brand" is one click away
+        const d = list.find((k) => k.isDefault);
+        if (d) setBrand(d.id);
+      })
+      .catch(() => {});
+  }, []);
   const res = RESOLUTIONS.find((r) => r.id === size)!;
+  const pickStarter = (id: string) => (setStarter(starter === id ? '' : id), setTemplate(''));
+  const pickTemplate = (id: string) => (setTemplate(template === id ? '' : id), setStarter(''));
 
   const create = async () => {
     setBusy(true);
     try {
       await flushSave();
-      const p = await api.create(name.trim() || t('newProject'), template ? { templateId: template } : { width: res.w, height: res.h, layout });
+      const brandId = brand === 'none' ? undefined : brand;
+      const p = await api.create(name.trim() || (starter ? '' : t('newProject')), starter ? { starterId: starter, brandId, lang: isHe ? 'he' : 'en' } : template ? { templateId: template, brandId } : { width: res.w, height: res.h, layout, brandId });
       await open(p.id);
       onClose();
     } catch (e: any) {
@@ -94,13 +109,43 @@ export function NewProjectDialog({ onClose }: { onClose: () => void }) {
           <input className="text-input" dir="auto" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('newProject')} autoFocus />
         </label>
 
+        <section>
+          <h3>{L('להתחיל מתבנית מוכנה', 'Start from a ready-made template')}</h3>
+          <div className="tile-row">
+            {STARTERS.map((s) => (
+              <button key={s.id} className={`tile starter${starter === s.id ? ' active' : ''}`} onClick={() => pickStarter(s.id)} aria-pressed={starter === s.id} title={isHe ? s.hintHe : s.hint}>
+                <LayoutPic w={s.width} h={s.height} layout={s.layout || 'single'} />
+                <strong>{isHe ? s.labelHe : s.label}</strong>
+                <span>{isHe ? s.hintHe : s.hint}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {brands.length > 0 && (
+          <section>
+            <h3>{L('מותג', 'Brand')}</h3>
+            <div className="chip-row wrap" role="radiogroup" aria-label={L('מותג', 'Brand')}>
+              <button role="radio" aria-checked={brand === 'none'} className={`chip-btn${brand === 'none' ? ' active' : ''}`} onClick={() => setBrand('none')}>
+                {L('בלי מותג', 'No brand')}
+              </button>
+              {brands.map((k) => (
+                <button key={k.id} role="radio" aria-checked={brand === k.id} className={`chip-btn brand-chip${brand === k.id ? ' active' : ''}`} onClick={() => setBrand(k.id)}>
+                  <i style={{ background: `linear-gradient(135deg, ${k.colors.primary}, ${k.colors.accent})` }} />
+                  <span dir="auto">{k.name}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         {templates.length > 0 && (
           <section>
             <h3>{L('התבניות שלי', 'My templates')}</h3>
             <div className="tile-row">
               {templates.map((tp) => (
                 <div key={tp.id} className={`tile tpl${template === tp.id ? ' active' : ''}`}>
-                  <button className="tile-main" onClick={() => setTemplate(template === tp.id ? '' : tp.id)} aria-pressed={template === tp.id}>
+                  <button className="tile-main" onClick={() => pickTemplate(tp.id)} aria-pressed={template === tp.id}>
                     <LayoutPic w={tp.width} h={tp.height} layout={tp.layout || 'single'} />
                     <strong dir="auto">{tp.name}</strong>
                     <span dir="ltr">
@@ -118,7 +163,7 @@ export function NewProjectDialog({ onClose }: { onClose: () => void }) {
           </section>
         )}
 
-        <fieldset disabled={!!template} className="np-fields">
+        <fieldset disabled={!!template || !!starter} className="np-fields">
           <section>
             <h3>{L('גודל הקנבס', 'Canvas size')}</h3>
             <div className="tile-row">
@@ -151,7 +196,7 @@ export function NewProjectDialog({ onClose }: { onClose: () => void }) {
         </fieldset>
         <div className="cta-wrap">
           <button className="cta" onClick={create} disabled={busy}>
-            {template ? <LayoutTemplate size={20} /> : <Check size={20} />} {template ? L('יצירה מהתבנית', 'Create from the template') : L('יצירת הפרויקט', 'Create the project')}
+            {template || starter ? <LayoutTemplate size={20} /> : <Check size={20} />} {template || starter ? L('יצירה מהתבנית', 'Create from the template') : L('יצירת הפרויקט', 'Create the project')}
           </button>
         </div>
       </div>

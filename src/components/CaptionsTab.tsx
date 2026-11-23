@@ -2,6 +2,7 @@ import { Captions, Cloud, Cpu, Download, Languages, Merge, Plus, Replace, Settin
 import { useEffect, useRef, useState } from 'react';
 import { addCaption, deleteClips, mergeCaptions, replaceInCaptions, setCaptionPreset, toSrt, updateClip } from '../../shared/ops';
 import { CAPTION_LANGS, CAPTION_PRESETS } from '../../shared/presets';
+import { brandCaptionStyle } from '../../shared/brand';
 import type { Track } from '../../shared/types';
 import { clipEnd } from '../../shared/types';
 import { actions } from '../actions';
@@ -299,7 +300,7 @@ export function CaptionsTab() {
         <div className="preset-grid">
           {CAPTION_PRESETS.map((p) => (
             <button key={p.id} className={`preset${track?.captionPreset === p.id ? ' active' : ''}`} disabled={!track} onClick={() => track && edit((d) => setCaptionPreset(d, track.id, p.id))}>
-              <StylePreview style={p.style} text={sample} words />
+              <StylePreview style={project.brand ? brandCaptionStyle(project.brand, p.id) : p.style} text={sample} words />
               <span>{isHe ? p.labelHe : p.label}</span>
             </button>
           ))}

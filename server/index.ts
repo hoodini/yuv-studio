@@ -16,6 +16,7 @@ import { CAPTION_PRESETS, FX_PRESETS, SFX, TITLE_PRESETS, TRANSITIONS } from '..
 import type { Asset, Project, Word } from '../shared/types';
 import { uid } from '../shared/types';
 import { listTemplates, projectFromTemplate, removeTemplate, saveTemplate } from './templates';
+import { addBrandBumper, applyBrand, createBrand, getBrand, listBrands, listStarters, logoPath, projectFromStarter, removeBrand, removeBrandLogo, resolveBrandId, setBrandLogo, updateBrand } from './brands';
 import { exportProject } from './export';
 import { mountUploads } from './uploads';
 import { downloadMedia } from './fetchUrl';
@@ -228,6 +229,9 @@ const wrap = (fn: (req: express.Request, res: express.Response) => any) => async
   }
 };
 const pid = (req: express.Request) => String(req.params.id);
+const fail = (message: string): never => {
+  throw Object.assign(new Error(message), { status: 400 });
+};
 const asset = (p: Project, id: string): Asset => {
   const a = p.assets.find((x) => x.id === id);
   if (!a) throw Object.assign(new Error(`Asset not found: ${id}`), { status: 404 });
@@ -242,16 +246,44 @@ app.get('/api/presets', (_req, res) => void res.json({ captions: CAPTION_PRESETS
 app.get('/api/projects', wrap(() => listProjects()));
 app.post(
   '/api/projects',
-  wrap((req) => {
+  wrap(async (req) => {
     const b = req.body || {};
-    if (b.templateId) return projectFromTemplate(String(b.templateId), String(b.name || ''), origin(req));
-    const p = newProject(b.name || 'Untitled', b.width || 1920, b.height || 1080, b.fps || 60);
-    // A size chosen in the new-project dialog stays, whatever video is dropped in first.
-    if (b.width && b.height) p.sizeLocked = true;
-    if (b.layout) applyLayout(p, String(b.layout));
-    return saveProject(p, origin(req));
+    const brandId = resolveBrandId(b.brandId);
+    if (b.starterId) return projectFromStarter(String(b.starterId), { name: b.name ? String(b.name) : undefined, brandId, lang: b.lang }, origin(req));
+    let p: Project;
+    if (b.templateId) p = await projectFromTemplate(String(b.templateId), String(b.name || ''), origin(req));
+    else {
+      p = newProject(b.name || 'Untitled', b.width || 1920, b.height || 1080, b.fps || 60);
+      // A size chosen in the new-project dialog stays, whatever video is dropped in first.
+      if (b.width && b.height) p.sizeLocked = true;
+      if (b.layout) applyLayout(p, String(b.layout));
+      p = saveProject(p, origin(req));
+    }
+    if (brandId) await applyBrand(p.id, brandId, origin(req));
+    return loadProject(p.id);
   }),
 );
+app.get('/api/starters', wrap(() => listStarters()));
+
+// ---------- brand kits ----------
+app.get('/api/brands', wrap(() => listBrands()));
+// A brand font that is not installed yet is fetched from Google Fonts, like a font an agent names in a title.
+app.post('/api/brands', wrap(async (req) => (await ensureFonts([req.body?.fonts?.heading, req.body?.fonts?.body]), createBrand(req.body || {}))));
+app.put('/api/brands/:bid', wrap(async (req) => (await ensureFonts([req.body?.fonts?.heading, req.body?.fonts?.body]), updateBrand(String(req.params.bid), req.body || {}))));
+app.delete('/api/brands/:bid', wrap((req) => removeBrand(String(req.params.bid))));
+app.put('/api/brands/:bid/logo', express.raw({ type: () => true, limit: '15mb' }), wrap((req) => setBrandLogo(String(req.params.bid), req.body as Buffer, String(req.headers['content-type'] || ''))));
+app.delete('/api/brands/:bid/logo', wrap((req) => removeBrandLogo(String(req.params.bid))));
+app.get('/api/brands/:bid/logo', (req, res) => {
+  try {
+    const k = getBrand(String(req.params.bid));
+    if (!k.logo) return void res.status(404).end();
+    res.set('cache-control', 'private, max-age=86400').sendFile(logoPath(k));
+  } catch {
+    res.status(404).end();
+  }
+});
+app.post('/api/projects/:id/brand', wrap((req) => (req.body?.remove ? (mutate(pid(req), (d) => void OPS.set_brand_style(d, { remove: true }), origin(req)), { brand: null }) : applyBrand(pid(req), resolveBrandId(req.body?.brandId || 'default') || fail('No brand kit yet. Create one first.'), origin(req), { logo: req.body?.logo }))));
+app.post('/api/projects/:id/bumper', wrap((req) => addBrandBumper(pid(req), { kind: req.body?.kind === 'outro' ? 'outro' : 'intro', duration: req.body?.duration, text: req.body?.text }, origin(req))));
 app.get('/api/templates', wrap(() => listTemplates()));
 app.post('/api/templates', wrap((req) => saveTemplate(String(req.body?.projectId || ''), String(req.body?.name || ''))));
 app.delete('/api/templates/:id', wrap((req) => removeTemplate(String(req.params.id))));
@@ -291,7 +323,8 @@ app.post(
           if (!fn) throw new Error(`Unknown op "${o.op}". Available: ${Object.keys(OPS).join(', ')}`);
           const args = o.args || {};
           const df = loadSettings().defaultFont;
-          if (o.op === 'add_text' && df && !args.style?.fontFamily) args.style = { ...(args.style || {}), fontFamily: df };
+          // the default font is for projects without a brand; a brand's own fonts win
+          if (o.op === 'add_text' && df && !p.brand && !args.style?.fontFamily) args.style = { ...(args.style || {}), fontFamily: df };
           return fn(p, args);
         }),
       origin(req),

@@ -26,8 +26,15 @@ export const FONT_WEIGHTS: Record<string, number[]> = {
   'Press Start 2P': [400],
 };
 
-/** Canvas text needs every face loaded up front; Hebrew and Latin subsets are separate files. */
-export async function loadFonts() {
+let once: Promise<void> | null = null;
+/**
+ * Canvas text needs every face loaded up front; Hebrew and Latin subsets are separate files. Loaded once per page and
+ * shared: every text preview calls this as it mounts. (Adding a font reloads the user's fonts via loadCustomFonts.)
+ */
+export function loadFonts() {
+  return (once ??= loadAll());
+}
+async function loadAll() {
   const jobs: Promise<unknown>[] = [];
   for (const [family, weights] of Object.entries(FONT_WEIGHTS)) {
     for (const w of weights) {

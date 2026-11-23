@@ -2,6 +2,7 @@
 // the server runs them on the stored project. The REST API and the MCP server call the same code.
 import { LAYOUTS, CAPTION_PRESETS, TITLE_PRESETS, baseStyle, neutralFx, noTransition } from './presets';
 import { coverScale, slotTransform, EASES, pickTransform, transformAt } from './geometry';
+import { addBumper, applyBrandStyle, brandCaptionStyle, brandTitleStyle, clearBrandStyle } from './brand';
 import type { Asset, BlendMode, Clip, Ease, Keyframe, Project, TextStyle, Track, TrackKind, Transform, Watermark, Word } from './types';
 import { audioFades, clamp, clipEnd, projectDuration, uid } from './types';
 
@@ -60,9 +61,10 @@ export function addTrack(p: Project, kind: TrackKind, name?: string): Track {
   const label = { video: 'Video', audio: 'Audio', text: 'Text', caption: 'Captions' }[kind];
   const track: Track = { id: uid('t_'), kind, name: name || `${label} ${count}`, muted: false, hidden: false, clips: [] };
   if (kind === 'caption') {
-    track.style = { ...CAPTION_PRESETS[0].style };
+    const preset = p.brand ? CAPTION_PRESETS.find((x) => x.id === p.brand!.captionPreset) || CAPTION_PRESETS[0] : CAPTION_PRESETS[0];
+    track.style = p.brand ? brandCaptionStyle(p.brand, preset.id) : { ...preset.style };
     track.transform = captionTransform();
-    track.captionPreset = CAPTION_PRESETS[0].id;
+    track.captionPreset = preset.id;
   }
   let index = p.tracks.length;
   if (kind === 'text' || kind === 'caption') index = 0;
@@ -181,7 +183,8 @@ export function addTextClip(p: Project, o: AddTextOpts = {}): Clip {
   const clip = blankClip('text', freeStart(track, start, duration), duration);
   clip.text = o.text ?? preset.sample;
   clip.name = clip.text;
-  clip.style = { ...preset.style, ...(o.style || {}) };
+  clip.style = { ...(p.brand ? brandTitleStyle(p.brand, preset.id) : preset.style), ...(o.style || {}) };
+  clip.preset = preset.id;
   clip.transform = { ...defaultTransform(), y: preset.y ?? 0.5, ...(o.transform || {}) };
   track.clips.push(clip);
   sortTrack(track);
@@ -839,7 +842,7 @@ export function setCaptionPreset(p: Project, trackId: string, presetId: string) 
   const track = needTrack(p, trackId);
   const preset = CAPTION_PRESETS.find((x) => x.id === presetId);
   if (!preset) throw new Error(`Unknown caption preset: ${presetId}. Options: ${CAPTION_PRESETS.map((x) => x.id).join(', ')}`);
-  track.style = { ...preset.style };
+  track.style = p.brand ? brandCaptionStyle(p.brand, preset.id) : { ...preset.style };
   track.captionPreset = preset.id;
   if (!track.transform) track.transform = captionTransform();
 }
@@ -986,6 +989,9 @@ export const OPS = {
   add_zoom: (p: Project, a: any) => ({ added: addZoom(p, a.clipId, a), keyframes: need(p, a.clipId).clip.keyframes }),
   apply_layout: (p: Project, a: any) => (applyLayout(p, a.layout), { layout: p.layout, tracks: p.tracks.filter((t) => t.slot).map((t) => ({ id: t.id, name: t.name, slot: t.slot })) }),
   set_watermark: (p: Project, a: any) => (setWatermark(p, a?.remove ? null : a), { watermark: p.watermark }),
+  set_brand_style: (p: Project, a: any) => (a?.remove ? (clearBrandStyle(p), { brand: null }) : applyBrandStyle(p, a.brand || a)),
+  add_bumper: (p: Project, a: any) =>
+    addBumper(p, a.kind === 'outro' ? 'outro' : 'intro', { logoAssetId: a.logoAssetId, backgroundAssetId: a.backgroundAssetId, duration: a.duration, text: a.text }, { addTrack, moveTrack, addMediaClip, addTextClip }),
   // Without `from` (API and MCP callers) the clip's place before the move is where it is now.
   insert_clip: (p: Project, a: any) => {
     const { track, clip } = need(p, a.clipId);

@@ -14,6 +14,7 @@ import { monitor, playback, timecode, useMonitor, usePlayhead, usePlaying } from
 import { getSelected, useStore } from '../store';
 import { EXPORT_PRESETS } from '../../shared/presets';
 import { SafeZones } from './SafeZones';
+import { brandCardRanges } from '../../shared/brand';
 
 type El = HTMLVideoElement | HTMLAudioElement | HTMLImageElement;
 
@@ -347,6 +348,8 @@ export function Stage() {
               const wm = project.watermark;
               const a = wm && project.assets.find((x) => x.id === wm.assetId);
               if (!wm || !a) return null;
+              // the brand's intro and outro cards show the logo big; the corner one steps aside (as in the export)
+              if (brandCardRanges(project).some(([s, e]) => t >= s && t < e)) return null;
               const r = watermarkRect(W, H, a, wm);
               return (
                 <img

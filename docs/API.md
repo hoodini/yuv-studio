@@ -9,7 +9,7 @@ From the same machine no authentication is needed. Through a public address ever
 | | |
 |---|---|
 | `GET /api/projects` | List |
-| `POST /api/projects` | Create. Body: `{ name, width?, height?, fps? }` |
+| `POST /api/projects` | Create. Body: `{ name, width?, height?, fps?, layout?, starterId?, templateId?, brandId? }` (see Templates) |
 | `GET /api/projects/:id` | The full project |
 | `GET /api/projects/:id/summary` | A compact timeline, the best starting point for an agent |
 | `PUT /api/projects/:id` | Replace the timeline (what the editor does when it saves) |
@@ -175,15 +175,31 @@ These go through `POST /api/projects/:id/ops` like the others (they are not sepa
 
 `update_clip` takes `fadeIn` and `fadeOut` (audio fades, seconds).
 
-`POST /api/projects` takes `width` and `height` (the size then stays, whatever video comes first), `layout`, or `templateId`.
+`POST /api/projects` takes `width` and `height` (the size then stays, whatever video comes first), `layout`, `starterId` (a ready-made template, with `lang: "he" | "en"` for its placeholder titles) or `templateId`, and `brandId` (a kit id, or `"default"`).
 
 ## Templates
 
 | Method | Path | Body | What it does |
 |---|---|---|---|
+| GET | `/api/starters` | | The ready-made templates: `youtube`, `reel`, `podcast`, `tutorial`, `feed` |
 | GET | `/api/templates` | | Saved templates |
-| POST | `/api/templates` | `projectId`, `name` | Save a project's canvas, layers, layout, titles and logo as a template |
+| POST | `/api/templates` | `projectId`, `name` | Save a project's canvas, layers, layout, titles, logo and brand as a template |
 | DELETE | `/api/templates/:id` | | Delete a template |
+
+## Brand kits
+
+| Method | Path | Body | What it does |
+|---|---|---|---|
+| GET | `/api/brands` | | The kits, the default first |
+| POST | `/api/brands` | `name`, `colors: { primary, accent, light, dark }`, `fonts: { heading, body }`, `captionPreset`, `cta`, `logoCorner`, `logoSize`, `logoOpacity`, `isDefault`, `logoFrom: { projectId, assetId }` | Create a kit. The first one is the default. A font that is not installed is fetched from Google Fonts |
+| PUT | `/api/brands/:id` | the same, any of them | Change a kit |
+| DELETE | `/api/brands/:id` | | Delete a kit (projects styled with it stay as they are) |
+| PUT | `/api/brands/:id/logo` | the image itself, `Content-Type: image/png`, `image/jpeg` or `image/webp` | Set the logo (up to 15 MB) |
+| DELETE | `/api/brands/:id/logo` | | Remove the logo |
+| POST | `/api/projects/:id/brand` | `brandId?` (default kit), `logo?: false`, or `remove: true` | Put a kit on the project: captions and titles take its colours and fonts, the logo goes in its corner, new titles and captions follow it |
+| POST | `/api/projects/:id/bumper` | `kind: "intro" \| "outro"`, `duration?`, `text?` | Add the brand's intro card (the edit moves later) or outro card |
+
+The operations behind them, for `/ops`: `set_brand_style` (`brand`, or `remove: true`; no logo) and `add_bumper` (`kind`, `backgroundAssetId`, `logoAssetId?`, `duration?`, `text?`).
 
 Exports run one at a time; several at once wait in a queue. Each file is named after the project, the preset and the time, and never replaces an earlier one.
 

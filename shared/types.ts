@@ -135,6 +135,33 @@ export interface Clip {
   style?: TextStyle;
   /** Video and image clips: how they mix with the layers below. Unset = normal. */
   blend?: BlendMode;
+  /** Text clips: the title preset the clip was made from, so a brand kit can restyle it in kind. */
+  preset?: string;
+}
+
+/**
+ * The look of a brand: four colours and two fonts. A project keeps a copy, so new titles and captions come out in
+ * the brand's look; the brand kit itself (with its logo) lives on the server (server/brands.ts).
+ */
+export interface BrandStyle {
+  /** The brand kit it came from. */
+  id?: string;
+  name: string;
+  colors: {
+    /** The main brand colour: buttons, pills. */
+    primary: string;
+    /** The highlight: the spoken word, the marker, the second gradient stop. */
+    accent: string;
+    /** Text over video. */
+    light: string;
+    /** Text on light pills; dark boxes. */
+    dark: string;
+  };
+  fonts: { heading: string; body: string };
+  /** The caption look new captions start from (see CAPTION_PRESETS). */
+  captionPreset?: string;
+  /** The line on the outro card, e.g. "Follow for more". */
+  cta?: string;
 }
 
 /** A region of the frame (fractions of width and height) a video layer's clips fit into: a layout's slot. */
@@ -185,6 +212,8 @@ export interface Project {
   markIn?: number | null;
   markOut?: number | null;
   watermark?: Watermark | null;
+  /** The brand look in use: new titles and captions follow it. */
+  brand?: BrandStyle | null;
   /** The layout chosen for the video layers (see LAYOUTS). */
   layout?: string;
   /** The frame size was chosen on purpose: the first video dropped in does not change it. */

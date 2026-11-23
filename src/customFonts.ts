@@ -14,8 +14,15 @@ let defaultFont = '';
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
-/** Fetch the list, (re)load the stylesheet and wait until every face can be drawn on a canvas. */
-export async function loadCustomFonts() {
+let inflight: Promise<void> | null = null;
+/**
+ * Fetch the list, (re)load the stylesheet and wait until every face can be drawn on a canvas. Calls that overlap share
+ * one load: setting the same stylesheet address twice fires no second load event, which would leave a caller waiting.
+ */
+export function loadCustomFonts() {
+  return (inflight ??= load().finally(() => (inflight = null)));
+}
+async function load() {
   try {
     const [fonts, settings] = await Promise.all([fetch('/api/fonts').then((r) => (r.ok ? r.json() : [])), fetch('/api/settings').then((r) => (r.ok ? r.json() : {}))]) as [any, any];
     list = Array.isArray(fonts) ? fonts : [];

@@ -19,6 +19,7 @@ export interface Template {
   height: number;
   fps: number;
   layout?: string;
+  brand?: Project['brand'];
   tracks: Track[];
   watermark?: (NonNullable<Project['watermark']> & { file: string }) | null;
 }
@@ -75,6 +76,7 @@ export function saveTemplate(projectId: string, name: string) {
     height: p.height,
     fps: p.fps,
     layout: p.layout,
+    brand: p.brand || null,
     tracks,
     watermark,
   };
@@ -103,6 +105,7 @@ export async function projectFromTemplate(id: string, name: string, origin: stri
     clips: tr.clips.map((c) => ({ ...c, id: uid('c_') })),
   }));
   p.layout = t.layout;
+  if (t.brand) p.brand = t.brand;
   p.sizeLocked = true;
   saveProject(p, origin);
   if (t.watermark?.file && fs.existsSync(t.watermark.file)) {
