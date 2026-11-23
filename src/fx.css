@@ -1,0 +1,366 @@
+/* Preview volume, the AI-at-work effects and the upload card. Neon Studio: cyan and violet only. */
+
+/* ---------- preview volume: on the picture (hover) and in the transport ---------- */
+.stage-area {
+  position: relative;
+}
+.stage-hud {
+  position: absolute;
+  left: 50%;
+  /* At the top of the picture: captions live at the bottom, and the controls must never hide them. */
+  top: 14px;
+  transform: translate(-50%, -8px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 999px;
+  background: rgba(8, 8, 12, 0.72);
+  backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 10px 30px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 30;
+}
+.stage-area:hover .stage-hud,
+.stage-hud:focus-within {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+.hud-play {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #08080c;
+  cursor: pointer;
+}
+.hud-play:hover {
+  background: var(--cyan-2);
+}
+.vol-ctl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+.vol-ctl.silent .vol-btn {
+  color: var(--cyan-2);
+}
+.vol-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 96px;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+}
+.vol-ctl.compact .vol-slider {
+  width: 72px;
+}
+.vol-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--cyan), var(--violet-2) var(--v), rgba(255, 255, 255, 0.16) var(--v));
+}
+.vol-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--cyan), var(--violet-2) var(--v), rgba(255, 255, 255, 0.16) var(--v));
+}
+.vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(23, 188, 207, 0.35);
+}
+.vol-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+}
+@media (max-width: 1100px) {
+  .transport-end .vol-ctl .vol-slider {
+    display: none;
+  }
+}
+
+/* ---------- the AI at work: glow around the frame, a guided cursor, changed clips shimmer ---------- */
+@keyframes agent-spin {
+  to {
+    --a: 360deg;
+  }
+}
+.agent-on .stage-frame-wrap {
+  isolation: isolate;
+}
+.agent-on .stage-frame-wrap::before,
+.agent-on .stage-frame-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 19px;
+  background: conic-gradient(from var(--a, 0deg), #17bccf, #4645aa, #7a6bff, #5de1ee, #17bccf);
+  animation: agent-spin 3.2s linear infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+.agent-on .stage-frame-wrap::after {
+  inset: -18px;
+  filter: blur(26px);
+  opacity: 0.75;
+  z-index: -2;
+}
+.agent-on .topbar {
+  box-shadow: inset 0 -2px 0 rgba(23, 188, 207, 0.55);
+}
+.agent-fx {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 900;
+}
+.agent-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.agent-arrow {
+  position: absolute;
+  left: -2px;
+  top: -2px;
+  filter: drop-shadow(0 0 8px rgba(93, 225, 238, 0.85)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+}
+.agent-label {
+  position: absolute;
+  left: 22px;
+  top: 24px;
+  white-space: nowrap;
+  font: 600 13px Assistant, Inter, system-ui, sans-serif;
+  color: #fff;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(23, 188, 207, 0.95), rgba(122, 107, 255, 0.95));
+  box-shadow: 0 6px 20px rgba(70, 69, 170, 0.55);
+}
+.agent-label b {
+  font-weight: 800;
+  margin-inline-end: 4px;
+}
+.agent-ripple {
+  position: absolute;
+  left: -18px;
+  top: -18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--cyan-2);
+  opacity: 0;
+  animation: agent-ripple 0.7s ease-out 0.62s;
+}
+@keyframes agent-ripple {
+  from {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+.agent-status {
+  position: absolute;
+  top: 66px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 13px Assistant, Inter, system-ui, sans-serif;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(8, 8, 12, 0.8);
+  box-shadow: inset 0 0 0 1px rgba(93, 225, 238, 0.45), 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.agent-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cyan-2);
+  box-shadow: 0 0 0 0 rgba(93, 225, 238, 0.7);
+  animation: agent-dot 1.4s ease-out infinite;
+}
+@keyframes agent-dot {
+  to {
+    box-shadow: 0 0 0 9px rgba(93, 225, 238, 0);
+  }
+}
+.agent-target {
+  outline: 2px solid var(--cyan-2) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgba(23, 188, 207, 0.18), 0 0 28px rgba(122, 107, 255, 0.55) !important;
+}
+.clip.agent-touched::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 20%, rgba(93, 225, 238, 0.55) 45%, rgba(122, 107, 255, 0.5) 55%, transparent 80%);
+  background-size: 250% 100%;
+  animation: agent-sheen 1.1s ease-out 2;
+  box-shadow: inset 0 0 0 2px rgba(93, 225, 238, 0.9);
+}
+@keyframes agent-sheen {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+/* ---------- desktop upload progress ---------- */
+.upload-status {
+  position: fixed;
+  top: 66px;
+  inset-inline-end: 18px;
+  width: min(360px, calc(100vw - 36px));
+  z-index: 850;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(20, 20, 27, 0.94);
+  backdrop-filter: blur(16px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 18px 40px rgba(0, 0, 0, 0.5);
+  display: grid;
+  gap: 8px;
+}
+.up-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 14px;
+}
+.up-row > svg {
+  color: var(--cyan-2);
+  flex: none;
+}
+.up-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.up-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.up-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--cyan), var(--violet-2));
+  transition: width 0.3s ease;
+}
+.up-bar i.busy {
+  background: linear-gradient(90deg, var(--cyan), var(--violet-2), var(--cyan));
+  background-size: 200% 100%;
+  animation: agent-sheen 1.4s linear infinite;
+}
+.up-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font: 500 12px Inter, system-ui, sans-serif;
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-on .stage-frame-wrap::before,
+  .agent-on .stage-frame-wrap::after,
+  .agent-dot,
+  .up-bar i.busy,
+  .clip.agent-touched::after {
+    animation: none;
+  }
+  .agent-cursor {
+    transition: none;
+  }
+}
+
+/* ---------- phone: the chosen file before it uploads, and the picture's controls ---------- */
+.m-picked {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+.m-picked-ask {
+  margin: 0;
+  font-weight: 700;
+  font-size: 18px;
+}
+.m-picked-media {
+  width: 100%;
+  max-height: 46vh;
+  border-radius: 18px;
+  background: #000;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+audio.m-picked-media {
+  max-height: none;
+  background: transparent;
+  box-shadow: none;
+}
+.m-picked-meta {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #b9b9c9;
+  font-size: 14px;
+}
+.m-picked-meta b {
+  color: #fff;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.m-picked-meta span {
+  flex: none;
+}
+.m-picked-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.m-app .stage-hud {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+  top: 10px;
+}
+.m-app .stage-hud .vol-slider {
+  width: 80px;
+}
+.m-app .agent-status {
+  top: auto;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+}

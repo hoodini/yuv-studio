@@ -1,0 +1,55 @@
+{
+  "name": "yuv-studio",
+  "version": "0.6.0",
+  "private": true,
+  "type": "module",
+  "description": "YUV.AI Studio - browser video editor with REST API and MCP server",
+  "license": "AGPL-3.0-only",
+  "author": "Yuval Avidani",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hoodini/yuv-studio.git"
+  },
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env server/index.ts --dev",
+    "build": "vite build",
+    "start": "tsx --env-file-if-exists=.env server/index.ts",
+    "mcp": "tsx --env-file-if-exists=.env server/mcp-stdio.ts",
+    "screenshots": "node scripts/screenshots.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:diff": "tsx scripts/test-diff.ts",
+    "test:edit": "tsx scripts/test-edit.ts",
+    "oss:export": "node scripts/oss-export.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "@fontsource/anton": "^5.3.0",
+    "@fontsource/assistant": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/inter-tight": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/karantina": "^5.3.0",
+    "@fontsource/press-start-2p": "^5.3.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "express": "^5.3.0",
+    "immer": "^11.2.9",
+    "lucide-react": "^1.71.0",
+    "multer": "^2.5.0",
+    "puppeteer-core": "^25.16.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "tsx": "^4.23.15",
+    "zod": "^4.6.7",
+    "zustand": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.7"
+  }
+}

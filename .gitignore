@@ -1,0 +1,8 @@
+node_modules
+dist
+data
+.env
+*.log
+.claude/settings.local.json
+public/home/liquid.js
+films/out
