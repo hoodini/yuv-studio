@@ -92,6 +92,7 @@ No agent? The editor has its own AI chat: bring a key for Claude, OpenAI, Grok, 
 | 📱 **Vertical, following the face** | Reframe 16:9 to 9:16, 4:5 or 1:1 with keyframes that follow the speaker like a camera operator, editable on the timeline. |
 | 🧍 **Remove background** | No green screen: people separated from the background on your GPU, steady frame to frame. Blur it (portrait mode), put any video behind, or put **text behind the person**. |
 | 🎙️ **Clean voice** | Noise and hum reduction, levelling and loudness in one step. |
+| ✏️ **Draw it, say it** | Circle a spot on the frame or leave a voice note, and the AI agent changes exactly that moment. Standing rules ("never the same sound effect twice") hold in every edit. |
 | 🎨 **Brand kits** | Your logo, colours and fonts once; every title, caption, intro and outro follows them, in every project. One kit per client. |
 | 🧩 **Ready-made templates** | YouTube video, Reel · Short · TikTok, Podcast clip, Tutorial, Feed post: the canvas, layout, captions and titles in place, in your brand. |
 | 🤖 **AI agent** | A chat inside the editor that edits while you watch. A glow around the frame and a guided cursor show each step. Plans to approve, changes to review. |

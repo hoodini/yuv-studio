@@ -3431,3 +3431,120 @@ html[dir='rtl'] .stock-search { padding: 4px 14px 4px 4px; }
 .tile.starter span {
   line-height: 1.3;
 }
+
+/* ---------- drawing on the frame for the AI agent ---------- */
+.draw-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  overflow: visible;
+}
+.draw-layer.on {
+  pointer-events: auto;
+  cursor: crosshair;
+  box-shadow: inset 0 0 0 2px var(--cyan-2);
+  border-radius: 16px;
+}
+.draw-stroke,
+.draw-shadow {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.draw-stroke {
+  stroke: var(--cyan-2);
+  stroke-width: 4;
+}
+.draw-shadow {
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 8;
+}
+.draw-btn.active {
+  background: var(--cyan-2);
+  color: #08080c;
+}
+.mark-chip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 16px;
+  background: rgba(93, 225, 238, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(93, 225, 238, 0.35);
+  color: var(--cyan-2);
+  font-size: 12.5px;
+}
+.mark-chip span {
+  flex: 1;
+  min-width: 0;
+  color: #fff;
+}
+.agent-tab .mic-btn {
+  background: var(--panel);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+.agent-tab .mic-btn.rec {
+  background: var(--violet-2);
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+@keyframes mic-pulse {
+  50% { box-shadow: 0 0 0 6px rgba(122, 107, 255, 0.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-tab .mic-btn.rec { animation: none; }
+}
+.rules-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  width: auto;
+  padding: 0 8px;
+}
+.rules-btn b {
+  font-size: 11px;
+  color: var(--cyan-2);
+}
+.rules-btn.active {
+  box-shadow: inset 0 0 0 1.5px var(--cyan-2);
+}
+.rules-box {
+  flex: none;
+}
+.rules-box .hint {
+  margin: 0;
+}
+.rule-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 13px;
+}
+.rule-row span {
+  flex: 1;
+  min-width: 0;
+}
+.msg-shot {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+}
+.msg-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-end: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(23, 188, 207, 0.18);
+  color: #0b5f69;
+  font-size: 11.5px;
+  font-weight: 700;
+}

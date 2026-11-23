@@ -1,4 +1,7 @@
-import { Bot, Check, ChevronDown, KeyRound, ListChecks, Loader2, Lock, Play, RotateCcw, Send, Settings2, Sparkles, Square, Wrench, X } from 'lucide-react';
+import { Bot, Check, ChevronDown, KeyRound, ListChecks, Loader2, Lock, Mic, PenLine, Pin, Play, RotateCcw, Send, Settings2, Sparkles, Square, Wrench, X } from 'lucide-react';
+import { captureFrame } from '../stageCapture';
+
+const fmtTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
 import { useEffect, useRef, useState } from 'react';
 import { agentFx } from '../agentFx';
 import { useT } from '../i18n';
@@ -22,11 +25,12 @@ interface Settings {
   model: string;
   baseUrl: string;
   planMode: 'big' | 'always' | 'off';
+  rules: string[];
   providers: Provider[];
 }
 type PlanState = 'open' | 'approved' | 'declined' | 'replaced';
 type Item =
-  | { kind: 'user'; text: string }
+  | { kind: 'user'; text: string; image?: string; at?: number }
   | { kind: 'text'; text: string }
   | { kind: 'tool'; name: string; input: any; ok?: boolean; blocked?: boolean; preview?: string }
   | { kind: 'plan'; summary: string; steps: string[]; state: PlanState }
@@ -56,6 +60,44 @@ export function AgentTab() {
   const log = useRef<HTMLDivElement>(null);
   const changes = useReviewChanges();
   const reviewing = useStore((s) => !!s.review);
+  const marks = useStore((s) => s.marks);
+  const drawing = useStore((s) => s.drawing);
+  const [showRules, setShowRules] = useState(false);
+  const [newRule, setNewRule] = useState('');
+  /** Voice note: recording, then being transcribed by the studio's own engine. */
+  const [voice, setVoice] = useState<'' | 'rec' | 'text'>('');
+  const rec = useRef<MediaRecorder | null>(null);
+  const toggleVoice = async () => {
+    if (voice === 'rec') return void rec.current?.stop();
+    if (voice) return;
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      return useStore.getState().notify(L('אין גישה למיקרופון. צריך לאשר אותה בדפדפן.', 'No access to the microphone. Allow it in the browser.'));
+    }
+    const chunks: Blob[] = [];
+    const r = new MediaRecorder(stream);
+    rec.current = r;
+    r.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    r.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop());
+      setVoice('text');
+      try {
+        const res = await fetch(`/api/voice-note?lang=${isHe ? 'he' : 'en'}`, { method: 'POST', headers: { 'content-type': r.mimeType || 'audio/webm' }, body: new Blob(chunks, { type: r.mimeType || 'audio/webm' }) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || res.statusText);
+        if (data.text) setText((cur) => (cur.trim() ? `${cur.trim()} ${data.text}` : data.text));
+        else useStore.getState().notify(L('לא נשמע דיבור בהקלטה', 'No speech was heard in the recording'));
+      } catch (e: any) {
+        useStore.getState().notify(String(e.message || e));
+      }
+      setVoice('');
+    };
+    r.start();
+    setVoice('rec');
+  };
+  const saveRules = (rules: string[]) => void save({ rules });
   // The editor glows while the agent works, also between tools while the model thinks.
   useEffect(() => {
     agentFx.setThinking(busy);
@@ -102,8 +144,12 @@ export function AgentTab() {
       return;
     }
     setText('');
+    // A drawing on the frame goes with this message: the strokes, the clips under them and a picture of the frame.
+    const marks = useStore.getState().marks;
+    const shot = marks ? await captureFrame(marks) : null;
+    if (marks) useStore.getState().set({ marks: null, drawing: false });
     // A new request instead of an answer replaces a plan still waiting.
-    setItems((x) => [...x.map((it) => (it.kind === 'plan' && it.state === 'open' ? { ...it, state: approve ? ('approved' as const) : ('replaced' as const) } : it)), { kind: 'user', text: m }]);
+    setItems((x) => [...x.map((it) => (it.kind === 'plan' && it.state === 'open' ? { ...it, state: approve ? ('approved' as const) : ('replaced' as const) } : it)), { kind: 'user', text: m, image: shot?.image || undefined, at: marks?.t }]);
     const wasDeclined = declined.current;
     declined.current = false;
     setBusy(true);
@@ -114,7 +160,7 @@ export function AgentTab() {
       const res = await fetch(`/api/projects/${project.id}/chat`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ text: m, playhead: playback.time, selection: useStore.getState().selection, approve, declined: wasDeclined }),
+        body: JSON.stringify({ text: m, playhead: playback.time, selection: useStore.getState().selection, approve, declined: wasDeclined, marks: marks ? { t: marks.t, strokes: marks.strokes, items: shot?.items || [], image: shot?.image || undefined } : undefined }),
         signal: ctrl.signal,
       });
       if (!res.ok || !res.body) {
@@ -149,6 +195,7 @@ export function AgentTab() {
               return out;
             });
           else if (e.type === 'error') setItems((x) => [...x, { kind: 'error', text: e.error }]);
+          else if (e.type === 'rules') setSettings((s) => (s ? { ...s, rules: e.rules } : s));
           else if (e.type === 'plan') setItems((x) => [...x, { kind: 'plan', summary: e.summary, steps: e.steps, state: 'open' }]);
           else if ((e.type === 'start' || e.type === 'done') && e.snapshot) void useStore.getState().startReview(e.snapshot);
         }
@@ -185,10 +232,43 @@ export function AgentTab() {
         <button className="mini" onClick={() => setShowSettings(!showSettings)} aria-expanded={showSettings} title={L('הגדרות הסוכן', 'Agent settings')} aria-label={L('הגדרות הסוכן', 'Agent settings')}>
           <Settings2 size={15} />
         </button>
+        <button className={`mini rules-btn${showRules ? ' active' : ''}`} onClick={() => setShowRules(!showRules)} aria-expanded={showRules} title={L('כללים קבועים לסוכן', 'Standing rules for the agent')} aria-label={L('כללים קבועים לסוכן', 'Standing rules for the agent')}>
+          <Pin size={14} />
+          {settings.rules.length > 0 && <b>{settings.rules.length}</b>}
+        </button>
         <button className="mini" onClick={reset} disabled={!items.length} title={L('שיחה חדשה', 'New chat')} aria-label={L('שיחה חדשה', 'New chat')}>
           <RotateCcw size={15} />
         </button>
       </div>
+
+      {showRules && (
+        <div className="engine-box rules-box" role="region" aria-label={L('כללים קבועים', 'Standing rules')}>
+          <strong>{L('כללים קבועים', 'Standing rules')}</strong>
+          <p className="hint">{L('הסוכן שומר עליהם בכל עריכה ובכל פרויקט. אפשר גם להגיד לו "מעכשיו תמיד..." או "אף פעם אל...", והוא יוסיף כלל לבד.', 'The agent keeps to them in every edit and project. You can also tell it "from now on always…" or "never…", and it adds the rule itself.')}</p>
+          {settings.rules.map((r, i) => (
+            <div key={i} className="rule-row">
+              <span dir="auto">{r}</span>
+              <button className="mini" onClick={() => saveRules(settings.rules.filter((_, j) => j !== i))} aria-label={L('מחיקת הכלל', 'Delete the rule')} title={L('מחיקת הכלל', 'Delete the rule')}>
+                <X size={13} />
+              </button>
+            </div>
+          ))}
+          <form
+            className="replace-row"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newRule.trim()) return;
+              saveRules([...settings.rules, newRule.trim()]);
+              setNewRule('');
+            }}
+          >
+            <input dir="auto" value={newRule} onChange={(e) => setNewRule(e.target.value)} placeholder={L('למשל: אף פעם לא אותו אפקט קול פעמיים', 'e.g. Never use the same sound effect twice')} />
+            <button className="mini" type="submit" disabled={!newRule.trim()} aria-label={L('הוספה', 'Add')} title={L('הוספה', 'Add')}>
+              <Check size={15} />
+            </button>
+          </form>
+        </div>
+      )}
 
       {showSettings && (
         <div className="engine-box agent-settings-sheet" role="dialog" aria-label={L('הגדרות הסוכן', 'Agent settings')}>
@@ -290,6 +370,12 @@ export function AgentTab() {
         {items.map((it, i) =>
           it.kind === 'user' ? (
             <div key={i} className="msg msg-user" dir="auto">
+              {it.image && <img className="msg-shot" src={it.image} alt={L('הפריים עם הסימון', 'The frame with the drawing')} />}
+              {it.at != null && (
+                <span className="msg-mark" dir="ltr">
+                  <PenLine size={12} /> {fmtTime(it.at)}
+                </span>
+              )}
               {it.text}
             </div>
           ) : it.kind === 'text' ? (
@@ -349,7 +435,37 @@ export function AgentTab() {
 
       <ReviewCard changes={changes} busy={busy} />
 
+      {(marks || drawing) && (
+        <div className={`mark-chip${marks ? ' has' : ''}`}>
+          <PenLine size={14} />
+          <span>
+            {marks
+              ? L(`סימון על הפריים ב-${fmtTime(marks.t)} (${marks.strokes.length}) יישלח עם ההודעה`, `A drawing at ${fmtTime(marks.t)} (${marks.strokes.length}) goes with your message`)
+              : L('מציירים על הפריים: להקיף מה לשנות, או למתוח קו לאן להזיז', 'Drawing on the frame: circle what to change, or draw a line to where it goes')}
+          </span>
+          {drawing && (
+            <button className="link-btn" onClick={() => useStore.getState().set({ drawing: false })}>
+              {L('סיום', 'Done')}
+            </button>
+          )}
+          {marks && (
+            <button className="mini" onClick={() => useStore.getState().set({ marks: null })} aria-label={L('מחיקת הסימון', 'Clear the drawing')} title={L('מחיקת הסימון', 'Clear the drawing')}>
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="agent-input">
+        <button
+          className={`send-btn mic-btn${voice === 'rec' ? ' rec' : ''}`}
+          onClick={() => void toggleVoice()}
+          disabled={voice === 'text'}
+          title={voice === 'rec' ? L('עצירה ותמלול', 'Stop and transcribe') : L('הודעה קולית', 'Voice note')}
+          aria-label={voice === 'rec' ? L('עצירה ותמלול', 'Stop and transcribe') : L('הודעה קולית', 'Voice note')}
+        >
+          {voice === 'text' ? <Loader2 className="spin" size={16} /> : voice === 'rec' ? <Square size={14} fill="currentColor" /> : <Mic size={16} />}
+        </button>
         <textarea
           dir="auto"
           rows={2}

@@ -1,4 +1,6 @@
-import { ChevronFirst, ChevronLast, Diamond, Maximize, Minimize, Pause, Play, StepBack, StepForward, Volume1, Volume2, VolumeX } from 'lucide-react';
+import { ChevronFirst, ChevronLast, Diamond, Maximize, Minimize, Pause, PenLine, Play, StepBack, StepForward, Volume1, Volume2, VolumeX } from 'lucide-react';
+import { DrawLayer } from './DrawLayer';
+import { stage } from '../stageCapture';
 import { actions } from '../actions';
 import { useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import { cssFilter, mediaRect, transformAt, transitionState, watermarkRect } from '../../shared/geometry';
@@ -208,6 +210,39 @@ export function Stage() {
   const [tick, resync] = useReducer((x: number) => x + 1, 0);
   const [, repaint] = useReducer((x: number) => x + 1, 0);
   const { width: W, height: H } = project;
+  const drawing = useStore((s) => s.drawing);
+
+  // The AI agent's frame capture: this frame, and the clips under a drawing (top layer first).
+  useEffect(() => {
+    stage.frame = frameRef.current;
+    stage.hits = (m) => {
+      const p = useStore.getState().project;
+      if (!p) return [];
+      const ids: string[] = [];
+      for (const s of m.strokes) {
+        const xs = s.map((q) => q.x * p.width);
+        const ys = s.map((q) => q.y * p.height);
+        const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+        for (const h of boxesAt(p, m.t, textBoxes.current)) {
+          const b = h.box;
+          const hit = b.cx + b.w / 2 >= x0 && b.cx - b.w / 2 <= x1 && b.cy + b.h / 2 >= y0 && b.cy - b.h / 2 <= y1;
+          if (hit && !ids.includes(h.clip.id)) ids.push(h.clip.id);
+        }
+      }
+      return ids.slice(0, 12);
+    };
+    return () => {
+      stage.frame = null;
+      stage.hits = undefined;
+    };
+  }, []);
+  // Esc puts the pen down
+  useEffect(() => {
+    if (!drawing) return;
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && useStore.getState().set({ drawing: false });
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [drawing]);
 
   useEffect(() => void loadFonts().then(() => setFonts(true)), []);
   useEffect(() => {
@@ -369,6 +404,7 @@ export function Stage() {
             })()}
           </div>
           {previewAs && <SafeZones W={W} H={H} fit={fit} presetId={previewAs} />}
+          <DrawLayer W={W} H={H} fit={fit} />
           {guides.v && <div className="guide guide-v" />}
           {guides.h && <div className="guide guide-h" />}
           {selHit && (
@@ -418,6 +454,19 @@ export function Stage() {
           </button>
           <button className="icon-btn" onClick={() => step(1)} aria-label="Next frame">
             <StepForward size={18} />
+          </button>
+          <button
+            className={`icon-btn draw-btn${drawing ? ' active' : ''}`}
+            onClick={() => {
+              const on = !useStore.getState().drawing;
+              useStore.getState().set({ drawing: on, ...(on ? { leftTab: 'agent' } : {}) });
+              if (on) playback.pause();
+            }}
+            aria-pressed={drawing}
+            title={tr('drawHint')}
+            aria-label={tr('draw')}
+          >
+            <PenLine size={17} />
           </button>
           <button className="icon-btn kf-stage" onClick={() => actions.toggleKeyframe()} title={tr('keyframe') + ' (K)'} aria-label={tr('keyframe')}>
             <Diamond size={17} />

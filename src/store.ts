@@ -7,6 +7,11 @@ import { api, clientId } from './api';
 import { type Activity, agentFx } from './agentFx';
 import { playback } from './playback';
 
+export interface Marks {
+  t: number;
+  strokes: { x: number; y: number }[][];
+}
+
 interface State {
   project: Project | null;
   selection: string[];
@@ -28,6 +33,10 @@ interface State {
   upload: { name: string; index: number; count: number; sent: number; total: number; startedAt: number; cancel: () => void } | null;
   /** The library tab open on the side (media, stock, agent...). */
   leftTab: string;
+  /** Drawing on the frame for the AI agent: the pen is on. */
+  drawing: boolean;
+  /** What was drawn, at which moment: strokes as points in fractions of the frame (0..1). Sent with the next message. */
+  marks: Marks | null;
   startReview: (snapshot: string) => Promise<void>;
   /** Keep these changes: the baseline moves forward so they stop showing. */
   acceptChanges: (changes: Change[]) => void;
@@ -86,6 +95,8 @@ export const useStore = create<State>((set, get) => ({
   selectedKf: null,
   upload: null,
   leftTab: localStorage.getItem('studio.leftTab') || 'media',
+  drawing: false,
+  marks: null,
   startReview: async (snapshot) => {
     const p = get().project;
     if (!p || get().review) return;
@@ -105,7 +116,7 @@ export const useStore = create<State>((set, get) => ({
     const project = await api.load(id);
     localStorage.setItem('studio.project', id);
     history.replaceState(null, '', `?project=${id}`);
-    set({ project, selection: [], past: [], future: [], review: null, hoverChange: null });
+    set({ project, selection: [], past: [], future: [], review: null, hoverChange: null, drawing: false, marks: null });
     playback.pause();
     afterChange(project);
     playback.seek(0);

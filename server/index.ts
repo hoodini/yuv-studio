@@ -580,6 +580,30 @@ app.get('/api/agent/settings', wrap(() => publicAgentSettings()));
 app.put('/api/agent/settings', wrap((req) => saveAgentSettings(req.body || {})));
 app.get('/api/agent/models', wrap(() => listModels()));
 app.delete('/api/projects/:id/chat', wrap((req) => (resetChat(pid(req)), { ok: true })));
+/**
+ * A voice note for the AI agent: the browser records it, the studio's own transcription engine turns it into text
+ * (the same engine as captions, so it stays on this computer unless a cloud engine is chosen). Nothing is kept.
+ */
+app.post(
+  '/api/voice-note',
+  express.raw({ type: () => true, limit: '25mb' }),
+  wrap(async (req) => {
+    const body = req.body as Buffer;
+    if (!body?.length) throw Object.assign(new Error('The recording is empty'), { status: 400 });
+    const id = uid('vn_');
+    const file = path.join(DIRS.tmp, `${id}.webm`);
+    fs.writeFileSync(file, body);
+    const lang = ['he', 'en'].includes(String(req.query.lang)) ? (String(req.query.lang) as Lang) : ('auto' as Lang);
+    try {
+      const asset = { id, name: 'Voice note', kind: 'audio', path: file, duration: 0, hasAudio: true, thumbs: 0, size: body.length } as Asset;
+      const t = await transcribe(asset, lang, () => {});
+      return { text: t.words.map((w) => w.text.trim()).join(' ').replace(/\s+([,.?!:;])/g, '$1').trim() };
+    } finally {
+      fs.rmSync(file, { force: true });
+      fs.rmSync(assetCache(id), { recursive: true, force: true });
+    }
+  }),
+);
 // One user turn, streamed as JSON lines: {type:'text'|'tool'|'result'|'error'|'done', ...}. Closing the request stops it.
 app.post('/api/projects/:id/chat', async (req, res) => {
   const id = pid(req);
@@ -599,7 +623,7 @@ app.post('/api/projects/:id/chat', async (req, res) => {
   // First, so the editor can review the turn's changes even when the user stops it halfway.
   emit({ type: 'start', snapshot });
   try {
-    const ctx = { playhead: Number(req.body?.playhead) || 0, selection: Array.isArray(req.body?.selection) ? req.body.selection.slice(0, 20).map(String) : [], approve: req.body?.approve === true, declined: req.body?.declined === true };
+    const ctx = { playhead: Number(req.body?.playhead) || 0, selection: Array.isArray(req.body?.selection) ? req.body.selection.slice(0, 20).map(String) : [], approve: req.body?.approve === true, declined: req.body?.declined === true, marks: req.body?.marks };
     await chat(id, text, ctx, emit, stop.signal, BASE, TOKEN);
   } catch (e: any) {
     emit({ type: 'error', error: String(e?.message || e) });

@@ -183,6 +183,13 @@ The export dialog has presets for YouTube, YouTube 4K, Shorts, Reels, TikTok, an
 
 Press **AI agent** in the top bar (or the first tab of the library): a chat with an AI model of your choice that edits the project while you watch. Write in the box at the bottom; until a model is connected, a card explains it and **Connect a model** opens the settings (a provider and your own key, or a model on this computer). Before a big edit it shows you a plan and waits for your approval (or before every edit, if you choose). After each turn you go through its changes one by one, marked on the timeline, and keep or take back each. See [AGENT.md](AGENT.md).
 
+**Show it, say it, or set a rule:**
+
+- **Draw on the frame:** the pen button under the picture. Circle what you mean or draw a line to where something should go, then write what to do ("make this bigger", "move the title here"). The drawing goes with your message, with the moment, the clips under it and a picture of the frame, so the agent changes exactly that spot. Models that see images (Claude, OpenAI, Grok, OpenRouter) get the picture too; other models get the drawing in words. Esc puts the pen down; the ✕ clears the drawing.
+- **Voice note:** the microphone button next to the text box. Talk, press it again, and your words appear in the box to check and send. It is transcribed with the same engine as captions (on this computer, unless you chose a cloud engine), and the recording is not kept.
+- **Standing rules:** the pin button. Rules like "never use the same sound effect twice" apply to every edit in every project. Add them there, or just tell the agent "from now on always…" or "never…" and it saves the rule itself; delete one with ✕.
+- With every message the agent also knows what is on screen at the playhead, so "this" and "here" work without selecting anything.
+
 While an AI edits (this agent, or Claude Code and other MCP clients), the frame glows and a labelled cursor goes to each part it changes; the changed clips shimmer. Nothing to turn on.
 
 ## Sounds
