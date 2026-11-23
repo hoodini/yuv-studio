@@ -34,6 +34,8 @@ type Item =
   | { kind: 'text'; text: string }
   | { kind: 'tool'; name: string; input: any; ok?: boolean; blocked?: boolean; preview?: string }
   | { kind: 'plan'; summary: string; steps: string[]; state: PlanState }
+  /** A standing rule the agent proposed: saved only when the user says so. */
+  | { kind: 'rule'; rule: string; state: 'open' | 'saved' | 'declined' }
   | { kind: 'error'; text: string };
 
 const SUGGEST_HE = ['תסיר את השתיקות', 'תוסיף כתוביות בעברית', 'זום עדין על הפתיחה', 'כותרת "פרק 1" בסמן', 'תייצא לרילס'];
@@ -195,7 +197,7 @@ export function AgentTab() {
               return out;
             });
           else if (e.type === 'error') setItems((x) => [...x, { kind: 'error', text: e.error }]);
-          else if (e.type === 'rules') setSettings((s) => (s ? { ...s, rules: e.rules } : s));
+          else if (e.type === 'rule') setItems((x) => [...x, { kind: 'rule', rule: String(e.rule), state: 'open' }]);
           else if (e.type === 'plan') setItems((x) => [...x, { kind: 'plan', summary: e.summary, steps: e.steps, state: 'open' }]);
           else if ((e.type === 'start' || e.type === 'done') && e.snapshot) void useStore.getState().startReview(e.snapshot);
         }
@@ -413,6 +415,33 @@ export function AgentTab() {
                   </div>
                   <p className="hint">{L('או כתבו למטה מה לשנות בתוכנית.', 'Or write below what to change in it.')}</p>
                 </>
+              )}
+            </section>
+          ) : it.kind === 'rule' ? (
+            <section key={i} className={`plan-card rule-card plan-${it.state === 'saved' ? 'approved' : it.state === 'declined' ? 'declined' : 'open'}`} aria-label={L('כלל קבוע לאישור', 'A standing rule to approve')}>
+              <header>
+                <Pin size={15} />
+                <strong>{L('לשמור ככלל קבוע?', 'Save as a standing rule?')}</strong>
+                {it.state !== 'open' && <span className="plan-state">{it.state === 'saved' ? L('נשמר', 'Saved') : L('לא נשמר', 'Not saved')}</span>}
+              </header>
+              <p className="plan-summary" dir="auto">
+                {it.rule}
+              </p>
+              {it.state === 'open' && (
+                <div className="plan-actions">
+                  <button
+                    className="pill-white"
+                    onClick={() => {
+                      saveRules([...(settings?.rules || []), it.rule]);
+                      setItems((x) => x.map((y) => (y === it ? { ...it, state: 'saved' as const } : y)));
+                    }}
+                  >
+                    <Check size={13} /> {L('לשמור', 'Save')}
+                  </button>
+                  <button className="pill-ghost" onClick={() => setItems((x) => x.map((y) => (y === it ? { ...it, state: 'declined' as const } : y)))}>
+                    <X size={13} /> {L('לא', 'No')}
+                  </button>
+                </div>
               )}
             </section>
           ) : it.kind === 'error' ? (

@@ -6,7 +6,7 @@
 
 - **Draw on the frame for the AI agent:** the pen under the picture. Circle what you mean or draw a line to where it goes, then say what to do. The agent gets the moment, each stroke, the clips under it and a picture of the frame with the drawing (for models that see images), and changes exactly that spot.
 - **Voice notes:** a microphone in the agent tab. Talk, and the studio's own transcription engine puts your words in the box.
-- **Standing rules:** "never use the same sound effect twice" applies to every edit in every project. Add rules in the tab, or tell the agent "from now on…" and it saves them (`remember_rule`).
+- **Standing rules:** "never use the same sound effect twice" applies to every edit in every project. Add rules in the tab, or tell the agent "from now on…" and it proposes one for you to save (`remember_rule`); nothing is saved without you.
 - The agent now also knows what is on screen at the playhead with every message, and answers in the language you wrote in.
 
 **Brand kits and ready-made templates** (a new **Brand** tab, and 4 new MCP tools: 63 in all)
