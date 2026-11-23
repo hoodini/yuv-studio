@@ -58,7 +58,7 @@ Open **http://127.0.0.1:5177** and drop a video on the window.
 
 > **Let an agent install it for you.** Paste [docs/AI_INSTALL_PROMPT.md](docs/AI_INSTALL_PROMPT.md) into Claude Code, Codex, Cursor or Gemini CLI. It installs what is missing, builds and starts the studio, connects itself over MCP and checks that everything works, on Windows, macOS or Linux.
 
-For captions: `pip install faster-whisper` to transcribe on your computer, or paste an OpenAI, Groq or ElevenLabs key in the Captions tab. For narration, paste a voice key in the Voice tab ([docs/VOICE.md](docs/VOICE.md)).
+For captions: `pip install faster-whisper` to transcribe on your computer (add `opencv-python-headless` for the vertical reframe that follows the face), or paste an OpenAI, Groq or ElevenLabs key in the Captions tab. For narration, paste a voice key in the Voice tab ([docs/VOICE.md](docs/VOICE.md)).
 
 ## 🔌 Connect your agent in one line
 
