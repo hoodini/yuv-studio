@@ -167,14 +167,21 @@ async function backgroundAsset(projectId: string, p: Project, b: BrandStyle, ori
   // 35% of the way to the primary at the far corner, so titles in the light colour stay readable everywhere
   const ch = (a: number, z: number) => `${a}+${((z - a) * 0.35).toFixed(2)}*pow((X/W+Y/H)/2\\,1.6)`;
   const out = path.join(DIRS.media, `${uid('m_')}_card.png`);
-  await run(FFMPEG, ['-v', 'error', '-y', '-f', 'lavfi', '-i', `color=c=black:s=${p.width}x${p.height}:d=1,format=rgb24`, '-vf', `geq=r='${ch(r0, r1)}':g='${ch(g0, g1)}':b='${ch(b0, b1)}'`, '-frames:v', '1', out]);
+  // The size goes into an ffmpeg filter: only whole numbers in range, whatever a saved project says.
+  const dim = (v: unknown) => {
+    const x = Math.round(Number(v));
+    if (!(x >= 16 && x <= 7680)) throw Object.assign(new Error('The project has an invalid frame size'), { status: 400 });
+    return x;
+  };
+  await run(FFMPEG, ['-v', 'error', '-y', '-f', 'lavfi', '-i', `color=c=black:s=${dim(p.width)}x${dim(p.height)}:d=1,format=rgb24`, '-vf', `geq=r='${ch(r0, r1)}':g='${ch(g0, g1)}':b='${ch(b0, b1)}'`, '-frames:v', '1', out]);
   return importAsset(projectId, out, name, origin);
 }
 
 /** Add the brand's intro card (at the start; the edit moves later) or outro card (at the end). */
 export async function addBrandBumper(projectId: string, o: { kind: 'intro' | 'outro'; duration?: number; text?: string }, origin: string) {
   const p = loadProject(projectId);
-  const b = p.brand || DEFAULT_BRAND;
+  // cleaned: the colours go into an ffmpeg filter, and a saved project could hold anything
+  const b = cleanBrand(p.brand || DEFAULT_BRAND);
   const kit = p.brand?.id ? (() => { try { return getBrand(p.brand!.id!); } catch { return undefined; } })() : undefined;
   const bg = await backgroundAsset(projectId, p, b, origin);
   const logo = kit ? await logoAsset(projectId, kit, origin) : undefined;
